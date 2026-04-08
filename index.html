@@ -1667,42 +1667,54 @@
       font-family: var(--font-mono)
     }
 
-    /* TOGGLE */
-    .theme-toggle {
+    /* THEME SWITCHER */
+    .theme-switcher {
       display: flex;
       align-items: center;
-      gap: 8px;
-      cursor: pointer
-    }
-
-    .toggle-track {
-      width: 58px;
-      height: 22px;
-      background: var(--surface3);
-      border-radius: 11px;
-      position: relative;
+      background: var(--surface2);
       border: 1px solid var(--border2);
-      transition: background .3s
+      border-radius: 24px;
+      padding: 4px;
+      position: relative;
+      cursor: pointer;
+      gap: 4px;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15);
     }
 
-    /* POSITIONS FOR 3 STATES */
-    [data-theme="dark"] .toggle-thumb { left: 3px; }
-    [data-theme="medium"] .toggle-thumb { left: 21px; }
-    [data-theme="light"] .toggle-thumb { left: 38px; }
-
-    /* TRACK COLORS */
-    [data-theme="medium"] .toggle-track { background: var(--accent); opacity: 0.8; }
-    [data-theme="light"] .toggle-track { background: var(--accent); }
-
-    .toggle-thumb {
-      width: 16px;
-      height: 16px;
-      background: #fff;
-      border-radius: 50%;
+    .ts-slider {
       position: absolute;
-      top: 2px;
-      transition: left .3s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, .3)
+      width: 28px;
+      height: 28px;
+      background: var(--surface3);
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3), var(--glow);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s, border-color 0.3s;
+      z-index: 1;
+    }
+
+    [data-theme="dark"] .ts-slider { transform: translateX(0); background: rgba(167, 139, 250, 0.15); border-color: #a78bfa; }
+    [data-theme="medium"] .ts-slider { transform: translateX(32px); background: rgba(34, 211, 238, 0.15); border-color: #22d3ee; }
+    [data-theme="light"] .ts-slider { transform: translateX(64px); background: #fff; border-color: #6366f1; }
+
+    .ts-icon {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      z-index: 2;
+      opacity: 0.5;
+      transition: all 0.3s;
+    }
+
+    [data-theme="dark"] .ts-icon:nth-child(2),
+    [data-theme="medium"] .ts-icon:nth-child(3),
+    [data-theme="light"] .ts-icon:nth-child(4) {
+      opacity: 1;
+      transform: scale(1.15);
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
     }
 
     /* RESPONSIVE */
@@ -1863,11 +1875,11 @@
           <button class="btn btn-ghost btn-sm" onclick="exportReport()" id="xlsxBtn" style="display:none">📊
             Excel</button>
           <button class="btn btn-ghost btn-sm" onclick="exportPDF()" id="pdfBtn" style="display:none">📄 PDF</button>
-          <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-            <div class="toggle-track" id="themeTrack">
-              <div class="toggle-thumb"></div>
-            </div>
-            <span style="font-size:14px" id="themeIcon">☀️</span>
+          <div class="theme-switcher" onclick="toggleTheme()" title="Change Theme">
+            <div class="ts-slider"></div>
+            <div class="ts-icon" title="Obsidian Neon">🌙</div>
+            <div class="ts-icon" title="Graphite Pro">🌤</div>
+            <div class="ts-icon" title="Porcelain SaaS">☀️</div>
           </div>
         </div>
       </header>
@@ -1978,11 +1990,6 @@
       const current = html.getAttribute('data-theme') || 'dark';
       const next = themes[(themes.indexOf(current) + 1) % themes.length];
       html.setAttribute('data-theme', next);
-      
-      const icon = document.getElementById('themeIcon');
-      if (next === 'light') icon.textContent = '☀️';
-      else if (next === 'medium') icon.textContent = '🌤';
-      else icon.textContent = '🌙';
       
       if (ready) redrawAllCharts();
     }
@@ -2144,6 +2151,62 @@
       const loaded = slots.filter(s => s.raw.length > 0);
       if (!loaded.length) { alert('Please upload at least one semester file.'); return; }
       semData = loaded.map(s => parseSem(s)).filter(Boolean);
+
+      // --- FILTER TO LATEST BATCH ---
+      let maxRegYear = 0;
+      semData.forEach(sem => {
+        sem.studentRows.forEach(sr => {
+          if (!sr.isLateral && sr.admYear) {
+            const yr = parseInt(sr.admYear);
+            if (!isNaN(yr) && yr > maxRegYear) maxRegYear = yr;
+          }
+        });
+      });
+      // Fallback if there are no regular students
+      if (maxRegYear === 0) {
+        semData.forEach(sem => {
+          sem.studentRows.forEach(sr => {
+            if (sr.admYear) {
+              const yr = parseInt(sr.admYear);
+              if (!isNaN(yr) && yr > maxRegYear) maxRegYear = yr;
+            }
+          });
+        });
+      }
+
+      semData.forEach(sem => {
+        sem.studentRows = sem.studentRows.filter(sr => {
+          if (!sr.admYear) return true;
+          const yr = parseInt(sr.admYear);
+          if (sr.isLateral && maxRegYear > 0) {
+            return yr === maxRegYear || yr === maxRegYear + 1;
+          }
+          return yr === maxRegYear;
+        });
+
+        // Recalculate semester stats after filtering
+        Object.keys(sem.subStats).forEach(code => {
+          let fails = 0, passes = 0, abCount = 0, whCount = 0, feCount = 0, total = 0;
+          sem.studentRows.forEach(s => {
+            const g = s.grades[code]; if (!g || g.skipped) return;
+            total++;
+            if (g.raw === 'F') fails++;
+            else if (g.raw === 'FE') feCount++;
+            else if (g.raw === 'AB') abCount++;
+            else if (g.raw === 'WH') whCount++;
+            else passes++;
+          });
+          const totalFail = fails + feCount + abCount + whCount;
+          sem.subStats[code] = { fails, passes, abCount, whCount, feCount, total, failPct: total ? (totalFail / total * 100).toFixed(1) : 0 };
+        });
+        sem.totalStu = sem.studentRows.length;
+        sem.passAll = sem.studentRows.filter(s => s.semPassed).length;
+        sem.failedSome = sem.totalStu - sem.passAll;
+        sem.totalFailures = sem.studentRows.reduce((a, s) => a + s.failCount, 0);
+        sem.passRate = sem.totalStu ? (sem.passAll / sem.totalStu * 100).toFixed(1) : 0;
+      });
+      // ------------------------------
+
       students = {};
       semData.forEach(sem => {
         sem.studentRows.forEach(sr => {

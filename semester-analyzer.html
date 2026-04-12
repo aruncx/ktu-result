@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SD2QV2YCYV"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-SD2QV2YCYV');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>AKTU Semester Result Analyzer – Instant PDF to Excel Analysis</title>
+  <meta name="description"
+    content="Transform APJ AKTU result PDFs into professional Excel reports. Get instant pass percentages, department rankings, and student performance insights with one click." />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48x48.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="css/unified.css">
+  <style>
+    /* Design System Overlay for Semester Analyzer */
+    .card {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 0 20px rgba(var(--accent-rgb, 99, 102, 241), 0.15);
+      border-color: var(--accent) !important;
+    }
+
+    /* Floating Panels with subtle glow */
+    .upload-panel,
+    .floating-panel {
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    }
+
+    .upload-panel:hover {
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12), 0 0 30px rgba(var(--accent-rgb, 99, 102, 241), 0.2);
+    }
+
+    /* Subtle Gradients and Glow Effects on buttons & icons */
+    .nav-item,
+    .btn {
+      transition: all 0.3s ease-in-out;
+    }
+
+    .nav-item:hover {
+      background: linear-gradient(90deg, rgba(var(--accent-rgb, 99, 102, 241), 0.1) 0%, transparent 100%);
+      text-shadow: 0 0 10px rgba(var(--accent-rgb, 99, 102, 241), 0.5);
+    }
+
+    .btn:hover {
+      box-shadow: 0 4px 15px rgba(var(--accent-rgb, 99, 102, 241), 0.3);
+      filter: brightness(1.1);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- React, ReactDOM, htm -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/htm@3.1.1/dist/htm.js"></script>
+
+  <!-- Recharts (depends on React, Prop-Types) -->
+  <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+  <script>
+    /* ── Setup ──────────────────────────────────────────────────────── */
+    const html = htm.bind(React.createElement);
+    const { useState, useCallback, useEffect, useRef, useMemo } = React;
+    const RC = window.Recharts;
+
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    /* ── CONSTANTS ──────────────────────────────────────────────────── */
+    const GP = { S: 10, 'A+': 9, A: 8.5, 'B+': 8, B: 7, 'C+': 6, C: 5, D: 4, F: 0, FE: 0, I: 0, Ab: 0, Absent: 0, Withheld: 0 };
+    const OK = new Set(['S', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'P']);
+    const DC = ['var(--accent)', 'var(--accent)', '#f78166', 'var(--green)', 'var(--gold)', '#79c0ff', '#ff7b72', '#56d364'];
+    const DEPT_MAP = {
+      CSE: 'Computer Science & Engineering', ECE: 'Electronics & Communication',
+      EEE: 'Electrical & Electronics', ME: 'Mechanical Engineering',
+      CE: 'Civil Engineering', IT: 'Information Technology',
+      AIM: 'Artificial Intelligence and Machine Learning'
+    };
+
+    /* ── ANALYSIS ENGINE ────────────────────────────────────────────── */
+    function analyze(semesters) {
+      const allStusGlobal = semesters.flatMap(sem => sem.departments.flatMap(d => d.students));
+      const yearsGlobal = allStusGlobal.map(s => parseInt(s.admissionYear)).filter(y => !isNaN(y));
+      const globalMaxYear = yearsGlobal.length > 0 ? Math.max(...yearsGlobal) : null;
+
+      return semesters.map(sem => {
+        const depts = sem.departments.map(dept => {
+          const targetStudents = globalMaxYear ? dept.students.filter(s => parseInt(s.admissionYear) === globalMaxYear) : dept.students;
+          const tot = targetStudents.length;
+          const pass = targetStudents.filter(s => s.allPassed).length;
+          const avgSGPA = tot ? targetStudents.reduce((a, s) => a + parseFloat(s.sgpa), 0) / tot : 0;
+          const sm = {};
+          targetStudents.forEach(stu => stu.subjects.forEach(sub => {
+            if (!sm[sub.code]) sm[sub.code] = { code: sub.code, name: sub.name, total: 0, passed: 0 };
+            sm[sub.code].total++;
+            if (sub.passed) sm[sub.code].passed++;
+          }));
+          const subjects = Object.values(sm).map(s => ({ ...s, failed: s.total - s.passed, pp: s.total ? ((s.passed / s.total) * 100).toFixed(1) : '0' }));
+          return { ...dept, students: targetStudents, tot, pass, fail: tot - pass, pp: tot ? ((pass / tot) * 100).toFixed(1) : '0', avgSGPA: avgSGPA.toFixed(2), subjects };
+        }).sort((a, b) => parseFloat(b.pp) - parseFloat(a.pp));
+
+        const totS = depts.reduce((a, d) => a + d.tot, 0);
+        const totP = depts.reduce((a, d) => a + d.pass, 0);
+        const allSubs = depts.flatMap(d => d.subjects);
+        const sorted = [...allSubs].sort((a, b) => parseFloat(a.pp) - parseFloat(b.pp));
+        return {
+          ...sem, departments: depts,
+          ov: {
+            totS, totP, totF: totS - totP, pp: totS ? ((totP / totS) * 100).toFixed(1) : '0',
+            best: depts[0], worst: depts[depts.length - 1], tough: sorted[0], easiest: sorted[sorted.length - 1], allSubs
+          }
+        };
+      });
+    }
+    /* ── PDF PARSER (robust multi-strategy) ─────────────────────────── */
+    function normDept(s) {
+      const l = s.toLowerCase().trim();
+      if (l.includes('computer') || l === 'cse') return 'CSE';
+      if (l.includes('electronics') || l.includes('communication') || l === 'ece') return 'ECE';
+      if (l.includes('electrical') || l === 'eee') return 'EEE';
+      if (l.includes('mechanical') || l === 'me') return 'ME';
+      if (l.includes('civil') || l === 'ce') return 'CE';
+      if (l.includes('information') || l === 'it') return 'IT';
+      if (l.includes('artificial') || l.includes('machine') || l === 'aim' || l === 'ad') return 'AIM';
+      const clean = s.trim().toUpperCase();
+      if (['CODE', 'COUR', 'STRE', 'PROG', 'BRAN'].includes(clean.slice(0, 4))) return 'UNK';
+      const m = s.match(/[A-Z]{2,4}(?=\d)/); if (m) return m[0].slice(0, 3);
+      return clean.slice(0, 4) || 'UNK';
+    }
+
+    function deptFromRegNo(r) {
+      const m = r.match(/^L?[A-Z]{3,}\d{2}([A-Z]{2,3})\d+/i);
+      if (!m) return null;
+      const c = m[1].toUpperCase();
+      const MAP = {
+        'CS': 'CSE', 'CSE': 'CSE', 'EC': 'ECE', 'ECE': 'ECE', 'EE': 'EEE', 'EEE': 'EEE',
+        'ME': 'ME', 'CE': 'CE', 'IT': 'IT', 'AD': 'AIM', 'AM': 'AIM', 'AIM': 'AIM'
+      };
+      return MAP[c] || c;
+    }
+
+    function cleanGrade(raw) {
+      const s = raw.replace(/[^A-Za-z+]/g, '').toUpperCase();
+      const MAP = {
+        'S': 'S', 'A+': 'A+', 'A': 'A', 'B+': 'B+', 'B': 'B', 'C+': 'C+', 'C': 'C', 'D': 'D', 'P': 'P',
+        'F': 'F', 'FE': 'FE', 'I': 'I', 'AB': 'Ab', 'ABSENT': 'Ab', 'WITHHELD': 'Withheld'
+      };
+      return MAP[s] ?? s;
+    }
+
+    const GRADE_RE = /^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld)$/i;
+    const CODE_RE = /^[A-Z]{2,6}\d{3,4}[A-Z]?$/;
+    const REG_RE = /[A-Z]{2,5}\d{2,4}[A-Z]{1,5}\d{2,4}/;
+
+    function parseTxt(txt) {
+      const lines = txt.split(/\r?\n/);
+      const students = [];
+      const subNameMap = {};
+      let cur = null;
+
+      const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
+
+      for (let li = 0; li < lines.length; li++) {
+        const line = lines[li];
+        const raw = line.trim();
+        if (!raw) continue;
+
+        // ── Course Definitions (Code -> Name) ────────────────────────
+        // KTU PDFs often have a table of Code and Course Name
+        const subDefMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()-]{5,150})/i);
+        // Ensure it's not a student record or mixed data
+        if (subDefMatch && !raw.includes('(') && !REG_RE.test(raw)) {
+          const code = subDefMatch[1].toUpperCase();
+          const name = subDefMatch[2].trim();
+          if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
+        }
+
+        // ── Register number (multiple label variants) ────────────────
+        const rnLabel = raw.match(
+          /(?:Reg(?:ister)?(?:\s*No\.?|Number|\.|No)|Roll\s*No\.?|Enroll(?:ment)?\s*No\.?|Reg\.?\s*No\.?)[:\s.-]*([A-Z0-9]{8,15})/i
+        );
+        // Or a bare reg-no token on its own line or at start
+        const rnBare = !rnLabel && (REG_RE.exec(raw) || raw.match(/^[A-Z]{3}\d{2}[A-Z]{2}\d{3}$/));
+        const rnVal = rnLabel ? rnLabel[1] : rnBare ? rnBare[0] : null;
+
+        if (rnVal) {
+          pushCur();
+          const cleanRn = rnVal.replace(/["']/g, '').trim();
+          const dept = deptFromRegNo(cleanRn) || 'Unknown';
+          cur = {
+            regNo: cleanRn,
+            department: dept,
+            subjects: [],
+            lateral: cleanRn.toUpperCase().startsWith('L'),
+            admissionYear: '20' + (cleanRn.match(/[A-Z]{3,}(\d{2})/)?.[1] || '??')
+          };
+        }
+
+        if (!cur) continue;
+        const words = raw.split(/\s+/);
+
+        // ── Branch / Programme / Department ─────────────────────────
+        const dpLabel = raw.match(
+          /(?:Branch|Programme(?:me)?|Department|Course(?!\s*Code)|Stream)\s*[:\s.-]+(.{3,60}?)(?:\s{2,}|$)/i
+        );
+        if (dpLabel) { cur.department = normDept(dpLabel[1]); }
+
+        // ── Subject grade rows ───────────────────────────────────────
+        // Strategy 1: "CODE(GRADE)" or "CODE [GRADE]" or "CODE {GRADE}"
+        const subWithGradeMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
+        if (subWithGradeMatch) {
+          const code = subWithGradeMatch[1].toUpperCase();
+          const grade = cleanGrade(subWithGradeMatch[2]);
+          if (GRADE_RE.test(grade) && !cur.subjects.find(s => s.code === code)) {
+            const name = subNameMap[code] || 'Subject';
+            cur.subjects.push({ code, name, grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
+            // Might be multiple on one line
+            let remaining = raw.replace(subWithGradeMatch[0], '');
+            while (true) {
+              const next = remaining.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
+              if (!next) break;
+              const c = next[1].toUpperCase();
+              const n = subNameMap[c] || 'Subject';
+              const g = cleanGrade(next[2]);
+              if (GRADE_RE.test(g) && !cur.subjects.find(s => s.code === c)) {
+                cur.subjects.push({ code: c, name: n, grade: g, passed: OK.has(g), gp: GP[g] ?? 0 });
+              }
+              remaining = remaining.replace(next[0], '');
+            }
+          }
+        }
+
+        // Strategy 2: "CODE  Subject Name  Grade" (2+ spaces as separator)
+        if (CODE_RE.test(words[0])) {
+          const parts = raw.split(/\s{2,}/);
+          if (parts.length >= 2) {
+            const code = parts[0].trim();
+            const gradeToken = cleanGrade(parts[parts.length - 1]);
+            const name = parts.slice(1, parts.length - 1).join(' ').trim() || 'Subject';
+            if (GRADE_RE.test(gradeToken) && !cur.subjects.find(s => s.code === code)) {
+              cur.subjects.push({ code, name, grade: gradeToken, passed: OK.has(gradeToken), gp: GP[gradeToken] ?? 0 });
+            }
+          }
+        }
+
+        // Strategy 3: Multi-token fallback (scans line for any code followed by a grade)
+        for (let i = 0; i < words.length - 1; i++) {
+          const possibleCode = words[i].toUpperCase();
+          if (CODE_RE.test(possibleCode)) {
+            // Check next few tokens for a grade
+            for (let j = 1; j <= 3 && (i + j) < words.length; j++) {
+              const possibleGrade = cleanGrade(words[i + j]);
+              if (GRADE_RE.test(possibleGrade)) {
+                if (!cur.subjects.find(s => s.code === possibleCode)) {
+                  cur.subjects.push({ code: possibleCode, name: subNameMap[possibleCode] || 'Subject', grade: possibleGrade, passed: OK.has(possibleGrade), gp: GP[possibleGrade] ?? 0 });
+                  i += j; // Skip the grade token
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      pushCur();
+
+      // ── Fallback: token-scan the entire text ─────────────────────
+      // Tries to extract students from an unstructured blob by finding
+      // reg-no → name words → branch → grade patterns in sequence.
+      if (students.length === 0) {
+        const tokens = txt.split(/\s+/);
+        let fc = null;
+        for (let ti = 0; ti < tokens.length; ti++) {
+          const t = tokens[ti];
+          if (REG_RE.test(t) && t.length >= 9) {
+            if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
+            fc = { regNo: t, name: 'Unknown', department: deptFromRegNo(t) || 'Unknown', subjects: [] };
+          } else if (fc && CODE_RE.test(t)) {
+            // next non-empty token after code text might be grade
+            let gi = ti + 1;
+            while (gi < tokens.length && !GRADE_RE.test(cleanGrade(tokens[gi])) && gi < ti + 8) gi++;
+            if (gi < tokens.length) {
+              const grade = cleanGrade(tokens[gi]);
+              if (GRADE_RE.test(grade) && !fc.subjects.find(s => s.code === t)) {
+                const name = subNameMap[t] || 'Subject';
+                fc.subjects.push({ code: t, name, grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
+                ti = gi;
+              }
+            }
+          }
+        }
+        if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
+      }
+
+      if (!students.length) return null;
+
+      // Group by department
+      const dm = {};
+      students.forEach(s => {
+        const d = s.department || 'Unknown';
+        if (!dm[d]) dm[d] = { code: d, name: DEPT_MAP[d] || d, students: [] };
+        dm[d].students.push(s);
+      });
+      return [{ id: 'uploaded', label: 'Uploaded Semester', departments: Object.values(dm) }];
+    }
+
+    function finishStu(s) {
+      const cred = s.subjects.length * 4, gp = s.subjects.reduce((a, x) => a + x.gp * 4, 0);
+      return { ...s, sgpa: cred ? (gp / cred).toFixed(2) : 0, allPassed: s.subjects.every(x => x.passed) };
+    }
+
+    async function parsePDF(file) {
+      const lib = window.pdfjsLib; if (!lib) throw new Error('PDF.js not loaded');
+      const buf = await file.arrayBuffer();
+      const pdf = await lib.getDocument({ data: buf }).promise;
+      // Extract text per page preserving line breaks via y-position grouping
+      let fullTxt = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const tc = await page.getTextContent();
+        // Group items by y-position (same line = within 3px)
+        const byY = {};
+        tc.items.forEach(item => {
+          const y = Math.round(item.transform[5] / 3) * 3; // bucket to 3px rows
+          if (!byY[y]) byY[y] = [];
+          byY[y].push(item);
+        });
+        // Sort y descending (PDF y=0 is bottom), then sort items left-to-right
+        const ys = Object.keys(byY).map(Number).sort((a, b) => b - a);
+        ys.forEach(y => {
+          byY[y].sort((a, b) => a.transform[4] - b.transform[4]);
+          fullTxt += byY[y].map(x => x.str).join(' ') + '\n';
+        });
+        fullTxt += '\n';
+      }
+      return parseTxt(fullTxt);
+    }
+
+    /* ── TINY COMPONENTS ────────────────────────────────────────────── */
+    function CTip({ active, payload, label }) {
+      if (!active || !payload?.length) return null;
+      return html`<div style=${{ background: '#161b22', border: '1px solid #30363d', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+    <p style=${{ color: '#8b949e', marginBottom: 4 }}>${label}</p>
+    ${payload.map((p, i) => html`<p key=${i} style=${{ color: p.color, margin: '2px 0' }}>${p.name}: <strong>${typeof p.value === 'number' ? p.value.toFixed(1) : p.value}%</strong></p>`)}
+  </div>`;
+    }
+    function ProgBar({ pct, color = 'var(--green)', h = 6 }) {
+      return html`<div style=${{ height: h, borderRadius: h / 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', width: '100%' }}>
+    <div style=${{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: h / 2, transition: 'width .8s ease' }}/>
+  </div>`;
+    }
+    function Badge({ label, ok }) {
+      return html`<span style=${{
+        display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+        background: ok ? 'rgba(16,217,168,.15)' : 'rgba(244,63,94,.15)', color: ok ? 'var(--green)' : 'var(--red)',
+        border: `1px solid ${ok ? 'rgba(16,217,168,.3)' : 'rgba(244,63,94,.3)'}`
+      }}>${label}</span>`;
+    }
+    function StatCard({ icon, label, value, color = 'var(--accent)', dark }) {
+      return html`<div style=${{
+        background: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+        border: `1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}`,
+        borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16
+      }}>
+    <div style=${{ width: 48, height: 48, borderRadius: 10, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>${icon}</div>
+    <div>
+      <div style=${{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: dark ? '#8b949e' : '#64748b', marginBottom: 4 }}>${label}</div>
+      <div style=${{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color }}>${value}</div>
+    </div>
+  </div>`;
+    }
+
+    /* ── MAIN APP ───────────────────────────────────────────────────── */
+    function KTUAnalyzer() {
+      const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'dark');
+      const dark = theme === 'dark' || theme === 'medium';
+
+      const toggleTheme = useCallback(() => {
+        const themes = ['dark', 'medium', 'light'];
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = themes[(themes.indexOf(current) + 1) % themes.length];
+        document.documentElement.setAttribute('data-theme', next);
+        setTheme(next);
+      }, []);
+      const [tab, setTab] = useState('upload');
+      const [rawSems, setRawSems] = useState(null);
+      const [analysis, setAnalysis] = useState(null);
+      const [selSem, setSelSem] = useState(0);
+      const [loading, setLoading] = useState(false);
+      const [dragOver, setDragOver] = useState(false);
+      const [uploadErr, setUploadErr] = useState('');
+      const [search, setSearch] = useState('');
+      const [deptFilter, setDeptFilter] = useState('ALL');
+      const [aiState, setAiState] = useState({ loading: false, data: null, err: null });
+      const fileRef = useRef();
+
+      const handleFile = useCallback(async (file) => {
+        if (!file || file.type !== 'application/pdf') { setUploadErr('Please upload a valid PDF file.'); return; }
+        setLoading(true); setUploadErr('');
+        try {
+          const raw = await parsePDF(file);
+          if (!raw || !raw[0]?.departments?.length) { setUploadErr('Could not extract data. Try sample data instead.'); setLoading(false); return; }
+          setRawSems(raw); setAnalysis(analyze(raw)); setTab('overview'); setSelSem(0);
+        } catch (e) { setUploadErr(`Parse error: ${e.message}`); }
+        setLoading(false);
+      }, []);
+
+      const onDrop = useCallback(e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }, [handleFile]);
+      const sem = analysis?.[selSem];
+
+      const filteredStudents = useMemo(() => {
+        if (!sem) return [];
+        const all = sem.departments.flatMap(d => d.students);
+        const byDept = deptFilter === 'ALL' ? all : all.filter(s => s.department === deptFilter);
+        if (!search) return byDept;
+        const q = search.toLowerCase();
+        return byDept.filter(s => s.regNo.toLowerCase().includes(q));
+      }, [sem, search, deptFilter]);
+
+      const exportExcel = () => {
+        if (!sem || !window.XLSX) return;
+        const XL = window.XLSX;
+        const wb = XL.utils.book_new();
+        const semLabel = sem.label || 'Semester';
+
+        /* ── Style Factories ──────────────────────────────────────────────── */
+        const bd = (s = 'thin', c = 'CCCCCC') => ({ top: { style: s, color: { rgb: c } }, bottom: { style: s, color: { rgb: c } }, left: { style: s, color: { rgb: c } }, right: { style: s, color: { rgb: c } } });
+        const S = {
+          title: { font: { name: 'Calibri', bold: true, sz: 16, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'D6E4F7' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'A0B8D8') },
+          info: { font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '3A4D6B' } }, fill: { fgColor: { rgb: 'EBF3FB' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'C0D4EE') },
+          hdr: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1B4F9B' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bd('medium', '1B4F9B') },
+          secGreen: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2D6A4F' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: bd('thin', '2D6A4F') },
+          secBlue: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1B3A6B' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: bd('thin', '1B3A6B') },
+          even: { font: { name: 'Calibri', sz: 11 }, fill: { fgColor: { rgb: 'FFFFFF' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd() },
+          odd: { font: { name: 'Calibri', sz: 11 }, fill: { fgColor: { rgb: 'E8F0FE' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd() },
+          evenL: { font: { name: 'Calibri', sz: 11 }, fill: { fgColor: { rgb: 'FFFFFF' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: bd() },
+          oddL: { font: { name: 'Calibri', sz: 11 }, fill: { fgColor: { rgb: 'E8F0FE' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: bd() },
+          pass: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '155724' } }, fill: { fgColor: { rgb: 'D4EDDA' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'C3E6CB') },
+          fail: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '7B1D1D' } }, fill: { fgColor: { rgb: 'F8D7DA' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'F5C6CB') },
+          warn: { font: { name: 'Calibri', sz: 11, color: { rgb: '856404' } }, fill: { fgColor: { rgb: 'FFF3CD' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'FFEEBA') },
+          gold: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '7B5200' } }, fill: { fgColor: { rgb: 'FFF3CD' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'FFEEBA') },
+        };
+
+        function sty(ws, r, c, style) { const ref = XL.utils.encode_cell({ r, c }); if (!ws[ref]) ws[ref] = { v: '', t: 's' }; ws[ref].s = style; }
+        function styRange(ws, r1, c1, r2, c2, style) { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) sty(ws, r, c, style); }
+        function autoW(aoa) { const nc = Math.max(...aoa.map(r => r.length), 0), w = Array(nc).fill(10); aoa.forEach(row => row.forEach((v, ci) => { const l = String(v ?? '').length; if (l > w[ci]) w[ci] = Math.min(l + 3, 45); })); return w.map(wch => ({ wch })); }
+        function mkRows(h, n) { return Array(n).fill({ hpt: h }); }
+        function passPct(p) { return p >= 75 ? S.pass : p < 50 ? S.fail : S.warn; }
+        function sgpaS(sg, odd) { return sg >= 8 ? S.pass : sg < 5 ? S.fail : (odd ? S.odd : S.even); }
+        function rowS(odd, text) { return odd ? (text ? S.oddL : S.odd) : (text ? S.evenL : S.even); }
+        function addFooter(ws, aoa, nc) {
+          const cr = aoa.length + 49;  // 50 rows after last data row
+          const ref = XL.utils.encode_cell({ r: cr, c: 0 });
+          ws[ref] = {
+            v: 'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur', t: 's',
+            s: { font: { name: 'Calibri', italic: true, bold: false, sz: 10, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'EBF3FB' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: { bottom: { style: 'thin', color: { rgb: 'A0B8D8' } } } }
+          };
+          if (!ws['!merges']) ws['!merges'] = [];
+          ws['!merges'].push({ s: { r: cr, c: 0 }, e: { r: cr, c: nc - 1 } });
+          const rng = XL.utils.decode_range(ws['!ref'] || 'A1'); if (cr > rng.e.r) rng.e.r = cr; ws['!ref'] = XL.utils.encode_range(rng);
+        }
+
+        /* ── SHEET 1: Departments ─────────────────────────────────────────── */
+        (() => {
+          const NC = 8, totS = sem.departments.reduce((a, d) => a + d.tot, 0), totP = sem.departments.reduce((a, d) => a + d.pass, 0);
+          const dat = sem.departments.map((d, i) => [i + 1, d.code, d.name || DEPT_MAP[d.code] || d.code, d.tot, d.pass, d.fail, parseFloat(d.pp), parseFloat(d.avgSGPA)]);
+          const aoa = [
+            [`${semLabel}  —  Department Performance Summary`],
+            [`Departments: ${sem.departments.length}   |   Total Students: ${totS}   |   Passed: ${totP}   |   Overall Pass%: ${sem.ov?.pp || '—'}%   |   Generated: ${new Date().toLocaleDateString('en-IN')}`],
+            [],
+            ['Rank', 'Dept Code', 'Department Name', 'Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA'],
+            ...dat
+          ];
+          const ws = XL.utils.aoa_to_sheet(aoa);
+          ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: NC - 1 } }, { s: { r: 2, c: 0 }, e: { r: 2, c: NC - 1 } }];
+          ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 32 }, { hpt: 18 }, { hpt: 8 }, { hpt: 24 }, ...mkRows(21, dat.length)];
+          ws['!freeze'] = { xSplit: 0, ySplit: 4, topLeftCell: 'A5', activePane: 'bottomLeft', state: 'frozen' };
+          ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 3, c: 0 }, e: { r: 3 + dat.length, c: NC - 1 } }) };
+          styRange(ws, 0, 0, 0, NC - 1, S.title); styRange(ws, 1, 0, 1, NC - 1, S.info); styRange(ws, 2, 0, 2, NC - 1, S.info);
+          styRange(ws, 3, 0, 3, NC - 1, S.hdr);
+          dat.forEach((row, ri) => {
+            const r = 4 + ri, odd = ri % 2 === 1;
+            row.forEach((v, ci) => {
+              let st;
+              if (ci === 0 && ri === 0) st = S.gold;
+              else if (ci === 6) st = passPct(parseFloat(v));
+              else if (ci === 7) st = sgpaS(parseFloat(v), odd);
+              else if (ci === 2) st = rowS(odd, true);
+              else st = rowS(odd, false);
+              sty(ws, r, ci, st);
+            });
+          });
+          addFooter(ws, aoa, NC);
+          XL.utils.book_append_sheet(wb, ws, 'Departments');
+        })();
+
+        /* ── SHEET 2: Subjects (per-department tables) ───────────────────── */
+        (() => {
+          const NC = 6;  // Subject Code, Subject Name, Total, Passed, Failed, Pass%
+          const subHdrs = ['Subject Code', 'Subject Name', 'Total Appeared', 'Passed', 'Failed', 'Pass %'];
+          const totalSubs = sem.departments.reduce((a, d) => a + d.subjects.length, 0);
+
+          // Build full aoa, merges, rowH dynamically
+          const aoa = []; const merges = []; const rowH = []; const rowStyles = [];
+          let cr = 0;
+
+          // Sheet-level title
+          aoa.push([`${semLabel}  —  Subject-wise Analysis by Department`]);
+          merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 32 }); rowStyles.push('sheetTitle'); cr++;
+
+          aoa.push([`Total Subjects: ${totalSubs}   |   Departments: ${sem.departments.length}`]);
+          merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 18 }); rowStyles.push('info'); cr++;
+
+          sem.departments.forEach((d, di) => {
+            // Gap between departments (except first)
+            if (di > 0) { aoa.push([]); rowH.push({ hpt: 12 }); rowStyles.push('gap'); cr++; }
+
+            // Department section header
+            const deptLabel = `${d.code}  —  ${d.name || DEPT_MAP[d.code] || d.code}   (${d.subjects.length} subjects, Pass%: ${d.pp}%)`;
+            aoa.push([deptLabel]);
+            merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 24 }); rowStyles.push('deptHdr'); cr++;
+
+            // Column headers
+            aoa.push(subHdrs); rowH.push({ hpt: 22 }); rowStyles.push('colHdr'); cr++;
+
+            // Subject data rows
+            d.subjects.forEach((s, ri) => {
+              aoa.push([s.code, s.name, s.total, s.passed, s.failed, parseFloat(s.pp)]);
+              rowH.push({ hpt: 20 }); rowStyles.push(ri % 2 === 0 ? 'even' : 'odd'); cr++;
+            });
+          });
+
+          const ws = XL.utils.aoa_to_sheet(aoa);
+          ws['!merges'] = merges;
+          ws['!cols'] = autoW(aoa);
+          ws['!rows'] = rowH;
+
+          // Apply styles row by row
+          let dataRowIdx = 0; // for zebra
+          rowStyles.forEach((type, r) => {
+            if (type === 'sheetTitle') styRange(ws, r, 0, r, NC - 1, S.title);
+            else if (type === 'info') styRange(ws, r, 0, r, NC - 1, S.info);
+            else if (type === 'deptHdr') styRange(ws, r, 0, r, NC - 1, S.secGreen);
+            else if (type === 'colHdr') { styRange(ws, r, 0, r, NC - 1, S.hdr); dataRowIdx = 0; }
+            else if (type === 'even' || type === 'odd') {
+              const odd = type === 'odd';
+              aoa[r].forEach((v, ci) => {
+                let st;
+                if (ci === 5) st = passPct(parseFloat(v));
+                else if (ci <= 1) st = rowS(odd, true);
+                else st = rowS(odd, false);
+                sty(ws, r, ci, st);
+              });
+              dataRowIdx++;
+            }
+          });
+
+          addFooter(ws, aoa, NC);
+          XL.utils.book_append_sheet(wb, ws, 'Subjects');
+        })();
+
+        /* ── SHEET 3: All Students ────────────────────────────────────────── */
+        (() => {
+          const NC = 5;
+          const dat = [];
+          sem.departments.forEach(d => d.students.forEach(s => dat.push([s.regNo, s.department, d.name || DEPT_MAP[s.department] || s.department, parseFloat(s.sgpa), s.allPassed ? 'PASS' : 'FAIL'])));
+          const totP = dat.filter(r => r[4] === 'PASS').length;
+          const pct = dat.length ? ((totP / dat.length) * 100).toFixed(1) : 0;
+          const aoa = [
+            [`${semLabel}  —  Complete Student Results`],
+            [`Total: ${dat.length}   |   Passed: ${totP}   |   Failed: ${dat.length - totP}   |   Pass%: ${pct}%`],
+            [],
+            ['Register No', 'Dept Code', 'Department Name', 'SGPA', 'Status'],
+            ...dat
+          ];
+          const ws = XL.utils.aoa_to_sheet(aoa);
+          ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: NC - 1 } }, { s: { r: 2, c: 0 }, e: { r: 2, c: NC - 1 } }];
+          ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 32 }, { hpt: 18 }, { hpt: 8 }, { hpt: 24 }, ...mkRows(21, dat.length)];
+          ws['!freeze'] = { xSplit: 0, ySplit: 4, topLeftCell: 'A5', activePane: 'bottomLeft', state: 'frozen' };
+          ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 3, c: 0 }, e: { r: 3 + dat.length, c: NC - 1 } }) };
+          styRange(ws, 0, 0, 0, NC - 1, S.title); styRange(ws, 1, 0, 1, NC - 1, S.info); styRange(ws, 2, 0, 2, NC - 1, S.info);
+          styRange(ws, 3, 0, 3, NC - 1, S.hdr);
+          dat.forEach((row, ri) => {
+            const r = 4 + ri, odd = ri % 2 === 1;
+            row.forEach((v, ci) => {
+              let st;
+              if (ci === 4) st = v === 'PASS' ? S.pass : S.fail;
+              else if (ci === 3) st = sgpaS(parseFloat(v), odd);
+              else if (ci === 0 || ci === 2) st = rowS(odd, true);
+              else st = rowS(odd, false);
+              sty(ws, r, ci, st);
+            });
+          });
+          addFooter(ws, aoa, NC);
+          XL.utils.book_append_sheet(wb, ws, 'All Students');
+        })();
+
+        /* ── PER-DEPARTMENT SHEETS ────────────────────────────────────────── */
+        sem.departments.forEach(dept => {
+          const nSubs = dept.subjects.length;
+          const allCodes = [...new Set(dept.students.flatMap(s => s.subjects.map(x => x.code)))];
+          const nStuCols = allCodes.length + 3;
+          const maxC = Math.max(nStuCols, 8) - 1;
+          // Fixed row offsets
+          const subSecR = 3, subHdrR = 4, subDatR = 5;
+          const stuSecR = subDatR + nSubs + 1, stuHdrR = stuSecR + 1, stuDatR = stuHdrR + 1;
+
+          const aoa = [];
+          const merges = [];
+          const rowH = [];
+
+          // Row 0: Title
+          aoa.push([`${dept.name || dept.code}  —  Full Department Analysis`]);
+          merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: maxC } });
+          rowH.push({ hpt: 32 });
+
+          // Row 1: Info
+          aoa.push([`Semester: ${semLabel}   |   Total: ${dept.tot}   |   Pass: ${dept.pass}   |   Fail: ${dept.fail}   |   Pass%: ${dept.pp}%   |   Avg SGPA: ${dept.avgSGPA}`]);
+          merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: maxC } });
+          rowH.push({ hpt: 18 });
+
+          // Row 2: Gap
+          aoa.push([]); rowH.push({ hpt: 10 });
+
+          // Row 3: Subject section header
+          aoa.push(['📚  SUBJECT-WISE ANALYSIS']);
+          merges.push({ s: { r: subSecR, c: 0 }, e: { r: subSecR, c: 5 } });
+          rowH.push({ hpt: 24 });
+
+          // Row 4: Subject column headers
+          aoa.push(['Subject Code', 'Subject Name', 'Total Appeared', 'Passed', 'Failed', 'Pass %']);
+          rowH.push({ hpt: 22 });
+
+          // Subject data
+          dept.subjects.forEach(s => { aoa.push([s.code, s.name, s.total, s.passed, s.failed, parseFloat(s.pp)]); rowH.push({ hpt: 20 }); });
+
+          // Gap
+          aoa.push([]); rowH.push({ hpt: 10 });
+
+          // Student section header
+          aoa.push(['🎓  STUDENT-WISE RESULTS  (with Subject Grades)']);
+          merges.push({ s: { r: stuSecR, c: 0 }, e: { r: stuSecR, c: nStuCols - 1 } });
+          rowH.push({ hpt: 24 });
+
+          // Student column headers
+          aoa.push(['Register No', 'SGPA', 'Status', ...allCodes]);
+          rowH.push({ hpt: 22 });
+
+          // Student data
+          dept.students.forEach(stu => {
+            const gm = {}; stu.subjects.forEach(x => gm[x.code] = x.grade);
+            aoa.push([stu.regNo, parseFloat(stu.sgpa), stu.allPassed ? 'PASS' : 'FAIL', ...allCodes.map(c => gm[c] || '—')]);
+            rowH.push({ hpt: 20 });
+          });
+
+          const ws = XL.utils.aoa_to_sheet(aoa);
+          ws['!merges'] = merges; ws['!rows'] = rowH; ws['!cols'] = autoW(aoa);
+          ws['!freeze'] = { xSplit: 0, ySplit: stuHdrR + 1, topLeftCell: `A${stuHdrR + 2}`, activePane: 'bottomLeft', state: 'frozen' };
+          ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: stuHdrR, c: 0 }, e: { r: stuDatR + dept.students.length - 1, c: nStuCols - 1 } }) };
+
+          // Styles
+          styRange(ws, 0, 0, 0, maxC, S.title);
+          styRange(ws, 1, 0, 1, maxC, S.info);
+          styRange(ws, subSecR, 0, subSecR, 5, S.secGreen);
+          styRange(ws, subHdrR, 0, subHdrR, 5, S.hdr);
+          styRange(ws, stuSecR, 0, stuSecR, nStuCols - 1, S.secBlue);
+          styRange(ws, stuHdrR, 0, stuHdrR, nStuCols - 1, S.hdr);
+
+          // Subject data styling
+          dept.subjects.forEach((s, ri) => {
+            const r = subDatR + ri, odd = ri % 2 === 1;
+            [s.code, s.name, s.total, s.passed, s.failed, parseFloat(s.pp)].forEach((v, ci) => {
+              let st;
+              if (ci === 5) st = passPct(parseFloat(v));
+              else if (ci <= 1) st = rowS(odd, true);
+              else st = rowS(odd, false);
+              sty(ws, r, ci, st);
+            });
+          });
+
+          // Student data styling
+          dept.students.forEach((stu, ri) => {
+            const r = stuDatR + ri, odd = ri % 2 === 1;
+            const row = [stu.regNo, parseFloat(stu.sgpa), stu.allPassed ? 'PASS' : 'FAIL', ...allCodes.map(c => { const x = stu.subjects.find(s => s.code === c); return x ? x.grade : '—'; })];
+            row.forEach((v, ci) => {
+              let st;
+              if (ci === 2) st = v === 'PASS' ? S.pass : S.fail;
+              else if (ci === 1) st = sgpaS(parseFloat(v), odd);
+              else if (ci === 0) st = rowS(odd, true);
+              else {
+                const g = String(v);
+                if (['F', 'FE', 'Ab', 'Absent', 'Withheld', 'I'].includes(g)) st = S.fail;
+                else if (g === 'S' || g === 'A+') st = S.pass;
+                else st = rowS(odd, false);
+              }
+              sty(ws, r, ci, st);
+            });
+          });
+
+          addFooter(ws, aoa, nStuCols);
+          XL.utils.book_append_sheet(wb, ws, (dept.code || 'DEPT').slice(0, 31));
+        });
+
+        /* ── Download ─────────────────────────────────── */
+        XL.writeFile(wb, `KTU_Results_${semLabel.replace(/\s+/g, '_')}.xlsx`);
+      };
+
+      const genAI = async () => {
+        if (!sem) return; setAiState({ loading: true, data: null, err: null });
+        // Simulate thinking time for a premium experience
+        await new Promise(r => setTimeout(r, 1500));
+        try {
+          const topDept = sem.ov.best;
+          const bottomDept = sem.ov.worst;
+          const toughSub = sem.ov.tough;
+          const easySub = sem.ov.easiest;
+
+          const insights = [];
+          // 1. Overall Performance Insight
+          const pp = parseFloat(sem.ov.pp);
+          insights.push({
+            type: pp > 75 ? 'positive' : pp > 60 ? 'info' : 'warning',
+            title: 'Overall Performance',
+            detail: `The batch achieved an overall pass rate of ${pp}%. ${pp > 75 ? 'Excellent result across most departments.' : 'There is significant room for improvement in core subjects.'}`
+          });
+
+          // 2. Departmental Insight
+          if (topDept && bottomDept) {
+            insights.push({
+              type: 'info',
+              title: 'Departmental Variance',
+              detail: `${topDept.code} is leading with ${topDept.pp}% pass rate, while ${bottomDept.code} is trailing at ${bottomDept.pp}%.`
+            });
+          }
+
+          // 3. Subject Criticality
+          if (toughSub && parseFloat(toughSub.pp) < 65) {
+            insights.push({
+              type: 'critical',
+              title: 'Subject Alert',
+              detail: `${toughSub.name} (${toughSub.code}) has the lowest pass rate at ${toughSub.pp}%, impacting the overall SGPA significantly.`
+            });
+          }
+
+          // 4. Specific Departmental Warning
+          const highFailDept = sem.departments.find(d => parseFloat(d.pp) < 55);
+          if (highFailDept) {
+            insights.push({
+              type: 'warning',
+              title: 'Department Red Flag',
+              detail: `${highFailDept.code} department needs urgent intervention, with ${highFailDept.fail} students needing to clear backlogs.`
+            });
+          }
+
+          const recs = [
+            `Conduct special remedial classes for ${toughSub?.name || 'difficult subjects'} focusing on previous year question patterns.`,
+            `Arrange peer-learning sessions where students from ${topDept?.code || 'topper departments'} can mentor those in need.`,
+            `Analyze internal assessment marks for ${toughSub?.code || 'low performing subjects'} to identify early warning signs.`,
+            `Host a student counseling session for the ${bottomDept?.code || 'low performing'} department to address academic stress.`
+          ];
+
+          const data = {
+            summary: `The semester analysis reveals a ${pp}% pass percentage. ${toughSub?.name} has emerged as the most challenging course, while ${topDept?.code} demonstrates the highest academic stability.`,
+            insights: insights.slice(0, 4),
+            recommendations: recs.slice(0, 4)
+          };
+
+          setAiState({ loading: false, data, err: null });
+        } catch (e) { setAiState({ loading: false, data: null, err: 'Analysis engine failed to process data.' }); }
+      };
+
+      /* Theme */
+      const bg = theme === 'dark' ? '#050810' : theme === 'medium' ? '#0d1117' : '#f8f9fc';
+      const surf = theme === 'dark' ? 'rgba(10,15,30,0.45)' : theme === 'medium' ? '#161c2d' : 'rgba(255,255,255,0.8)';
+      const bd = theme === 'dark' ? 'rgba(167,139,250,0.1)' : theme === 'medium' ? '#30363d' : 'rgba(99,102,241,0.1)';
+      const txt = theme === 'dark' ? '#f8fafc' : theme === 'medium' ? '#c9d1d9' : '#0f172a';
+      const mu = theme === 'dark' ? '#64748b' : theme === 'medium' ? '#6e7681' : '#94a3b8';
+
+      const TABS = [
+        { id: 'upload', icon: 'fa-cloud-arrow-up', label: 'Upload' },
+        { id: 'overview', icon: 'fa-chart-line', label: 'Overview', nd: true },
+        { id: 'depts', icon: 'fa-building-columns', label: 'Departments', nd: true },
+        { id: 'subjects', icon: 'fa-book-bookmark', label: 'Subjects', nd: true },
+        { id: 'students', icon: 'fa-users-viewfinder', label: 'Students', nd: true },
+        { id: 'ai', icon: 'fa-wand-magic-sparkles', label: 'AI Insights', nd: true }
+      ];
+
+      return html`<div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div style=${{ padding: '20px 16px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src="assets/favicon-48x48.png" style=${{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,var(--accent),var(--accent))', objectFit: 'contain', padding: '4px', boxShadow: '0 4px 12px rgba(124,110,245,.4)' }} alt="Logo" />
+        <div>
+          <div style=${{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, letterSpacing: '.04em', color: 'var(--accent)', lineHeight: 1 }}>APJ AKTU RESULT</div>
+          <div style=${{ fontSize: 9, letterSpacing: '.12em', color: mu, lineHeight: 1 }}>ANALYTICAL ENGINE</div>
+        </div>
+      </div>
+      
+      <nav style=${{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
+        <div class="nav-item" onClick=${() => window.location.href = 'index.html'} style=${{ marginBottom: 12, borderBottom: `1px solid ${bd}`, borderRadius: 0, paddingBottom: 12 }}>
+          <i class="fa-solid fa-house" style=${{ fontSize: 16, width: 24 }}></i><span>Dashboard Home</span>
+        </div>
+        ${TABS.filter(t => !t.nd || analysis).map(t => html`
+          <div key=${t.id} class=${'nav-item ' + (tab === t.id ? 'nav-active' : '')} onClick=${() => setTab(t.id)}>
+            <i class=${'fa-solid ' + t.icon} style=${{ fontSize: 16, width: 24 }}></i>${t.label}
+          </div>`)}
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="dev-credit">Developed by <strong style=${{ color: 'var(--accent)' }}>Arun Xavier</strong><br/>Asst. Prof., Dept. of EEE<br/>Vidya Academy of Science & Technology,<br/>Thrissur</div>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div style=${{ flex: 1, fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, color: txt, letterSpacing: '.02em' }}>
+          SEMESTER RESULT <span style=${{ color: 'var(--accent)' }}> PDF ANALYZER</span>
+        </div>
+        
+        <div style=${{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          ${analysis && rawSems?.length > 1 && html`
+            <select value=${selSem} onChange=${e => { setSelSem(+e.target.value); setAiState({ loading: false, data: null, err: null }); }} style=${{ fontSize: 12, padding: '5px 10px' }}>
+              ${rawSems.map((s, i) => html`<option key=${i} value=${i}>${s.label}</option>`)}
+            </select>`}
+          ${analysis && html`
+            <button onClick=${exportExcel} class="btn" style=${{ padding: '6px 12px', background: 'rgba(16,217,168,.1)', color: 'var(--green)', border: '1px solid rgba(16,217,168,.25)', fontSize: 12 }}>📥 Export Excel</button>`}
+          <div class="theme-switcher" onClick=${toggleTheme} title="Change Theme">
+            <div class="ts-slider" style=${{ transform: theme === 'dark' ? 'translateX(0)' : theme === 'medium' ? 'translateX(32px)' : 'translateX(64px)' }}></div>
+            <div class="ts-icon" title="Obsidian Neon">🌙</div>
+            <div class="ts-icon" title="Graphite Pro">🌤</div>
+            <div class="ts-icon" title="Porcelain SaaS">☀️</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- Content Area -->
+
+      <!-- UPLOAD TAB -->
+      ${tab === 'upload' && html`<div class="fadeUp" style=${{ maxWidth: 680, margin: '32px auto' }}>
+        <div style=${{ textAlign: 'center', marginBottom: 40 }}>
+          <div style=${{ fontFamily: "var(--font-head)", fontSize: 42, fontWeight: 800, letterSpacing: '.02em', background: 'linear-gradient(135deg,var(--accent) 40%,var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1, marginBottom: 12 }}>
+            SEMESTER RESULT PDF ANALYZER
+          </div>
+          <p style=${{ color: mu, fontSize: 15, lineHeight: 1.7, maxWidth: 480, margin: '0 auto' }}>
+            Upload KTU result PDFs for instant analytics, department rankings, subject difficulty analysis and AI-powered insights.
+          </p>
+        </div>
+
+        <div onDragOver=${e => { e.preventDefault(); setDragOver(true); }} onDragLeave=${() => setDragOver(false)} onDrop=${onDrop}
+          onClick=${() => !loading && fileRef.current?.click()}
+          style=${{
+            border: `2px dashed ${dragOver ? 'var(--accent)' : bd}`, borderRadius: 16, padding: '52px 24px', cursor: loading ? 'default' : 'pointer',
+            background: dragOver ? 'rgba(167,139,250,.06)' : dark ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.02)',
+            transition: 'all .2s', textAlign: 'center', marginBottom: 16
+          }}>
+          <div style=${{ fontSize: 48, marginBottom: 16, lineHeight: 1 }}>${loading ? '⏳' : '📋'}</div>
+          <div style=${{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: dragOver ? 'var(--accent)' : txt }}>${loading ? 'Parsing PDF…' : 'Drop KTU Result PDF here'}</div>
+          <div style=${{ color: mu, fontSize: 13 }}>${loading ? html`<span class="pulse">Extracting student records…</span>` : 'or click to browse — PDF files only'}</div>
+          <input ref=${fileRef} type="file" accept=".pdf" style=${{ display: 'none' }} onChange=${e => handleFile(e.target.files[0])}/>
+        </div>
+
+        ${uploadErr && html`<div style=${{ padding: '12px 16px', borderRadius: 8, background: 'rgba(244,63,94,.1)', border: '1px solid rgba(244,63,94,.25)', color: 'var(--red)', fontSize: 13, marginBottom: 16 }}>⚠ ${uploadErr}</div>`}
+
+
+
+        <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 32 }}>
+          ${[{ icon: '◈', t: 'Smart Dashboard', d: 'Bar, pie, line & radar charts' }, { icon: '⬡', t: 'Dept Rankings', d: 'Pass %, SGPA, difficulty analysis' }, { icon: '✦', t: 'AI Insights', d: 'Claude-powered trend analysis' }].map((f, i) => html`
+            <div key=${i} class="card" style=${{ padding: '18px 14px', textAlign: 'center', background: dark ? 'rgba(255,255,255,.03)' : 'white' }}>
+              <div style=${{ fontFamily: "var(--font-mono)", fontSize: 28, marginBottom: 8, color: 'var(--accent)' }}>${f.icon}</div>
+              <div style=${{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>${f.t}</div>
+              <div style=${{ fontSize: 11, color: mu }}>${f.d}</div>
+            </div>`)}
+        </div>
+      </div>`}
+
+      <!-- OVERVIEW TAB -->
+      ${tab === 'overview' && sem && html`<div class="fadeUp">
+        <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
+          <${StatCard} icon="◷" label="Total Students"  value=${sem.ov.totS}      color="var(--accent)" dark=${dark}/>
+          <${StatCard} icon="✓" label="Overall Pass %"  value=${`${sem.ov.pp}%`}  color="var(--green)" dark=${dark}/>
+          <${StatCard} icon="✗" label="Total Failed"    value=${sem.ov.totF}       color="var(--red)" dark=${dark}/>
+          <${StatCard} icon="★" label="Best Department" value=${sem.ov.best?.code} color="var(--gold)" dark=${dark}/>
+        </div>
+
+        <div style=${{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, marginBottom: 20 }}>
+          <div class="card" style=${{ padding: '20px' }}>
+            <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 16 }}>DEPARTMENT-WISE PASS %</div>
+            <${RC.ResponsiveContainer} width="100%" height=${260}>
+              <${RC.BarChart} data=${sem.departments.map((d, i) => ({ name: d.code, Pass: +d.pp, Fail: +(100 - d.pp).toFixed(1) }))}>
+                <${RC.CartesianGrid} strokeDasharray="3 3" stroke=${dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'}/>
+                <${RC.XAxis} dataKey="name" tick=${{ fill: mu, fontSize: 12 }}/>
+                <${RC.YAxis} domain=${[0, 100]} tick=${{ fill: mu, fontSize: 12 }}/>
+                <${RC.Tooltip} content=${html`<${CTip}/>`}/>
+                <${RC.Legend} wrapperStyle=${{ fontSize: 12, color: mu }}/>
+                <${RC.Bar} dataKey="Pass" fill="var(--green)" radius=${[4, 4, 0, 0]} stackId="a"/>
+                <${RC.Bar} dataKey="Fail" fill="var(--red)" radius=${[0, 0, 0, 0]} stackId="a"/>
+              </${RC.BarChart}>
+            </${RC.ResponsiveContainer}>
+          </div>
+          <div class="card" style=${{ padding: '20px' }}>
+            <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 16 }}>PASS vs FAIL DISTRIBUTION</div>
+            <${RC.ResponsiveContainer} width="100%" height=${260}>
+              <${RC.PieChart}>
+                <${RC.Pie} data=${[{ name: 'Passed', value: +sem.ov.totP }, { name: 'Failed', value: +sem.ov.totF }]}
+                  cx="50%" cy="50%" innerRadius=${65} outerRadius=${105} paddingAngle=${4} dataKey="value"
+                  label=${({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}>
+                  <${RC.Cell} fill="var(--green)"/><${RC.Cell} fill="var(--red)"/>
+                </${RC.Pie}>
+                <${RC.Tooltip} formatter=${v => [v + ' students']}/>
+              </${RC.PieChart}>
+            </${RC.ResponsiveContainer}>
+          </div>
+        </div>
+
+        <div style=${{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+          <div class="card" style=${{ padding: '20px' }}>
+            <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 16 }}>DEPARTMENT RADAR</div>
+            <${RC.ResponsiveContainer} width="100%" height=${260}>
+              <${RC.RadarChart} data=${sem.departments.map(d => ({ dept: d.code, Pass: +d.pp, SGPA: +d.avgSGPA * 10 }))}>
+                <${RC.PolarGrid} stroke=${dark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.1)'}/>
+                <${RC.PolarAngleAxis} dataKey="dept" tick=${{ fill: mu, fontSize: 12 }}/>
+                <${RC.PolarRadiusAxis} domain=${[0, 100]} tick=${{ fill: mu, fontSize: 10 }}/>
+                <${RC.Radar} name="Pass %" dataKey="Pass" stroke="var(--green)" fill="var(--green)" fillOpacity=${0.15}/>
+                <${RC.Radar} name="SGPA×10" dataKey="SGPA" stroke="var(--accent)" fill="var(--accent)" fillOpacity=${0.12}/>
+                <${RC.Legend} wrapperStyle=${{ fontSize: 12, color: mu }}/>
+                <${RC.Tooltip} content=${html`<${CTip}/>`}/>
+              </${RC.RadarChart}>
+            </${RC.ResponsiveContainer}>
+          </div>
+          <div style=${{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            ${[{ icon: '🥇', title: 'Best Department', name: sem.ov.best?.name, stat: `${sem.ov.best?.pp}% pass · SGPA ${sem.ov.best?.avgSGPA}`, color: 'var(--gold)' },
+          { icon: '📉', title: 'Needs Attention', name: sem.ov.worst?.name, stat: `${sem.ov.worst?.pp}% pass · SGPA ${sem.ov.worst?.avgSGPA}`, color: 'var(--red)' },
+          { icon: '🔥', title: 'Toughest Subject', name: sem.ov.tough?.name, stat: `Only ${sem.ov.tough?.pp}% pass rate`, color: 'var(--accent)' },
+          { icon: '⭐', title: 'Easiest Subject', name: sem.ov.easiest?.name, stat: `${sem.ov.easiest?.pp}% pass rate`, color: 'var(--green)' },
+          ].map((h, i) => html`
+              <div key=${i} class="card" style=${{ padding: '14px 16px', borderLeft: `3px solid ${h.color}`, display: 'flex', gap: 12, alignItems: 'center' }}>
+                <span style=${{ fontSize: 22 }}>${h.icon}</span>
+                <div style=${{ flex: 1, minWidth: 0 }}>
+                  <div style=${{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.07em', color: mu, marginBottom: 2 }}>${h.title}</div>
+                  <div style=${{ fontWeight: 600, fontSize: 13, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>${h.name}</div>
+                  <div style=${{ fontFamily: "var(--font-mono)", fontSize: 12, color: h.color }}>${h.stat}</div>
+                </div>
+              </div>`)}
+          </div>
+        </div>
+
+        ${analysis?.length > 1 && html`
+          <div class="card" style=${{ padding: '20px' }}>
+            <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 16 }}>SEMESTER COMPARISON — PASS % TREND</div>
+            <${RC.ResponsiveContainer} width="100%" height=${240}>
+              <${RC.LineChart} data=${analysis.map(a => ({ sem: a.label, ...Object.fromEntries(a.departments.map(d => [d.code, +d.pp])) }))}>
+                <${RC.CartesianGrid} strokeDasharray="3 3" stroke=${dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'}/>
+                <${RC.XAxis} dataKey="sem" tick=${{ fill: mu, fontSize: 12 }}/>
+                <${RC.YAxis} domain=${[40, 100]} tick=${{ fill: mu, fontSize: 12 }}/>
+                <${RC.Tooltip} content=${html`<${CTip}/>`}/>
+                <${RC.Legend} wrapperStyle=${{ fontSize: 12, color: mu }}/>
+                ${sem.departments.map((d, i) => html`<${RC.Line} key=${d.code} type="monotone" dataKey=${d.code} stroke=${DC[i % DC.length]} strokeWidth=${2} dot=${{ r: 4, fill: DC[i % DC.length] }} activeDot=${{ r: 5 }}/>`)}
+              </${RC.LineChart}>
+            </${RC.ResponsiveContainer}>
+          </div>`}
+      </div>`}
+
+      <!-- DEPARTMENTS TAB -->
+      ${tab === 'depts' && sem && html`<div class="fadeUp">
+        <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 22 }}>
+          ${sem.departments.map((dept, i) => html`
+            <div key=${dept.code} class="card" style=${{ padding: '20px', borderTop: `3px solid ${DC[i % DC.length]}` }}>
+              <div style=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div>
+                  <div style=${{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 800, letterSpacing: '.04em', color: DC[i % DC.length], lineHeight: 1 }}>${dept.code}</div>
+                  <div style=${{ fontSize: 11, color: mu, marginTop: 3 }}>${dept.name}</div>
+                </div>
+                <span style=${{ fontSize: 11, color: mu, background: dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)', padding: '3px 8px', borderRadius: 6 }}>#${i + 1}</span>
+              </div>
+              <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+                ${[{ l: 'Total', v: dept.tot, c: txt }, { l: 'Passed', v: dept.pass, c: 'var(--green)' }, { l: 'Failed', v: dept.fail, c: 'var(--red)' }].map((s, j) => html`
+                  <div key=${j} style=${{ textAlign: 'center', padding: '8px 4px', background: dark ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.04)', borderRadius: 8 }}>
+                    <div style=${{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 600, color: s.c }}>${s.v}</div>
+                    <div style=${{ fontSize: 10, color: mu, letterSpacing: '.05em' }}>${s.l}</div>
+                  </div>`)}
+              </div>
+              <div style=${{ marginBottom: 8 }}>
+                <div style=${{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+                  <span style=${{ color: 'var(--green)', fontWeight: 600 }}>${dept.pp}% Pass</span>
+                  <span style=${{ color: 'var(--red)' }}>${(100 - parseFloat(dept.pp)).toFixed(1)}% Fail</span>
+                </div>
+                <${ProgBar} pct=${parseFloat(dept.pp)} color=${DC[i % DC.length]}/>
+              </div>
+              <div style=${{ fontSize: 12, color: mu }}>Avg SGPA: <span style=${{ fontFamily: "var(--font-mono)", color: 'var(--accent)', fontWeight: 600 }}>${dept.avgSGPA}</span></div>
+            </div>`)}
+        </div>
+        <div class="card">
+          <div style=${{ padding: '16px 20px', borderBottom: `1px solid ${bd}` }}>
+            <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em' }}>DEPARTMENT RANKINGS TABLE</div>
+          </div>
+          <table>
+            <thead><tr><th>Rank</th><th>Code</th><th>Department</th><th>Total</th><th>Passed</th><th>Failed</th><th>Pass %</th><th>Avg SGPA</th></tr></thead>
+            <tbody>
+              ${sem.departments.map((d, i) => html`
+                <tr key=${d.code}>
+                  <td><span style=${{ fontWeight: 600, color: i === 0 ? 'var(--gold)' : i === 1 ? '#8b949e' : mu }}>#${i + 1}</span></td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", fontWeight: 600, color: DC[i % DC.length] }}>${d.code}</span></td>
+                  <td style=${{ color: mu, fontSize: 12 }}>${d.name}</td>
+                  <td style=${{ fontFamily: "var(--font-mono)" }}>${d.tot}</td>
+                  <td style=${{ fontFamily: "var(--font-mono)", color: 'var(--green)' }}>${d.pass}</td>
+                  <td style=${{ fontFamily: "var(--font-mono)", color: 'var(--red)' }}>${d.fail}</td>
+                  <td><div style=${{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 110 }}>
+                    <div style=${{ width: 50, flexShrink: 0 }}><${ProgBar} pct=${parseFloat(d.pp)} color=${DC[i % DC.length]} h=${5}/></div>
+                    <span style=${{ fontFamily: "var(--font-mono)", color: DC[i % DC.length], fontWeight: 600, fontSize: 13 }}>${d.pp}%</span>
+                  </div></td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--accent)' }}>${d.avgSGPA}</span></td>
+                </tr>`)}
+            </tbody>
+          </table>
+        </div>
+      </div>`}
+
+      <!-- SUBJECTS TAB -->
+      ${tab === 'subjects' && sem && html`<div class="fadeUp">
+        <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>
+          <${StatCard} icon="◉" label="Total Subjects"   value=${sem.ov.allSubs.length}         color="var(--accent)" dark=${dark}/>
+          <${StatCard} icon="🔥" label="Toughest Subject" value=${`${sem.ov.tough?.pp}% pass`}  color="var(--red)" dark=${dark}/>
+          <${StatCard} icon="⭐" label="Easiest Subject"  value=${`${sem.ov.easiest?.pp}% pass`} color="var(--green)" dark=${dark}/>
+        </div>
+        <div class="scrollArea" style=${{ maxHeight: 'calc(100vh - 280px)', marginTop: 10 }}>
+          ${sem.departments.map((dept, di) => html`
+            <div key=${dept.code} class="card" style=${{ marginBottom: 18 }}>
+              <div style=${{ padding: '14px 20px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style=${{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 14, color: DC[di % DC.length] }}>${dept.code}</span>
+                <span style=${{ fontSize: 13, color: mu }}>— ${dept.name}</span>
+              </div>
+              <table>
+                <thead><tr><th>Code</th><th>Subject Name</th><th>Total</th><th>Passed</th><th>Failed</th><th>Pass %</th><th>Difficulty</th></tr></thead>
+                <tbody>
+                  ${[...dept.subjects].sort((a, b) => parseFloat(a.pp) - parseFloat(b.pp)).map(sub => {
+            const p = parseFloat(sub.pp), [cls, lbl] = p < 60 ? ['diffH', 'Hard'] : p < 78 ? ['diffM', 'Medium'] : ['diffE', 'Easy'], barColor = p < 60 ? 'var(--red)' : p < 78 ? 'var(--gold)' : 'var(--green)';
+            return html`<tr key=${sub.code}>
+                      <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--accent)', fontSize: 12 }}>${sub.code}</span></td>
+                      <td style=${{ maxWidth: 220, fontSize: 13 }}>${sub.name}</td>
+                      <td style=${{ fontFamily: "var(--font-mono)" }}>${sub.total}</td>
+                      <td style=${{ fontFamily: "var(--font-mono)", color: 'var(--green)' }}>${sub.passed}</td>
+                      <td style=${{ fontFamily: "var(--font-mono)", color: 'var(--red)' }}>${sub.failed}</td>
+                      <td style=${{ minWidth: 130 }}><div style=${{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style=${{ width: 50, flexShrink: 0 }}><${ProgBar} pct=${p} color=${barColor} h=${5}/></div>
+                        <span style=${{ fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 13, color: barColor }}>${sub.pp}%</span>
+                      </div></td>
+                      <td><span class=${'btn ' + cls} style=${{ padding: '2px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20 }}>${lbl}</span></td>
+                    </tr>`;
+          })}
+                </tbody>
+              </table>
+            </div>`)}
+        </div>
+      </div>`}
+
+      <!-- STUDENTS TAB -->
+      ${tab === 'students' && sem && html`<div class="fadeUp">
+        <div style=${{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input value=${search} onChange=${e => setSearch(e.target.value)} placeholder="Search by registration number…" style=${{ width: 280 }}/>
+          <select value=${deptFilter} onChange=${e => setDeptFilter(e.target.value)} style=${{ width: 160 }}>
+            <option value="ALL">All Departments</option>
+            ${sem.departments.map(d => html`<option key=${d.code} value=${d.code}>${d.code} — ${d.name}</option>`)}
+          </select>
+          <div style=${{ color: mu, fontSize: 13 }}>Showing <span style=${{ color: txt, fontWeight: 600 }}>${Math.min(filteredStudents.length, 200)}</span>${filteredStudents.length > 200 ? ' of ' + filteredStudents.length : ''} students</div>
+        </div>
+        <div class="card" style=${{ overflowX: 'auto' }}>
+          <table>
+            <thead><tr><th>#</th><th>Reg. No.</th><th>Dept</th><th>SGPA</th><th>Status</th><th>Passed</th><th>Failed</th></tr></thead>
+            <tbody>
+              ${filteredStudents.slice(0, 200).map((stu, i) => {
+            const passCount = stu.subjects.filter(s => s.passed).length, failCount = stu.subjects.length - passCount, di = sem.departments.findIndex(d => d.code === stu.department);
+            return html`<tr key=${i}>
+                  <td style=${{ color: mu, fontSize: 11 }}>${i + 1}</td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", fontSize: 12, color: mu }}>${stu.regNo}</span></td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: DC[di >= 0 ? di % DC.length : 0] }}>${stu.department}</span></td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--accent)', fontWeight: 600 }}>${stu.sgpa}</span></td>
+                  <td><${Badge} label=${stu.allPassed ? 'PASS' : 'FAIL'} ok=${stu.allPassed}/></td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--green)' }}>${passCount}</span></td>
+                  <td><span style=${{ fontFamily: "var(--font-mono)", color: failCount > 0 ? 'var(--red)' : mu }}>${failCount}</span></td>
+                </tr>`;
+          })}
+            </tbody>
+          </table>
+        </div>
+      </div>`}
+
+      <!-- AI INSIGHTS TAB -->
+      ${tab === 'ai' && sem && html`<div class="fadeUp" style=${{ maxWidth: 920, margin: '0 auto' }}>
+        <div style=${{ textAlign: 'center', marginBottom: 32 }}>
+          <div style=${{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, letterSpacing: '.03em', background: 'linear-gradient(135deg,var(--accent),var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>
+            AI PERFORMANCE INSIGHTS
+          </div>
+          <p style=${{ color: mu, fontSize: 14 }}>Powered by Claude — analyzes ${sem.ov.totS} students across ${sem.departments.length} departments</p>
+        </div>
+
+        ${!aiState.data && !aiState.loading && html`
+          <div class="card" style=${{ padding: '48px 24px', textAlign: 'center', marginBottom: 20 }}>
+            <div style=${{ fontSize: 48, marginBottom: 16, color: 'var(--accent)' }}>✦</div>
+            <div style=${{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>Ready to Analyze</div>
+            <p style=${{ color: mu, fontSize: 13, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 28px' }}>
+              Claude AI will analyze performance, identify difficulty patterns, and generate actionable recommendations.
+            </p>
+            <button onClick=${genAI} class="btn" style=${{ padding: '14px 36px', fontSize: 15, fontWeight: 600, background: 'linear-gradient(135deg,var(--accent),var(--accent))', color: 'white', border: 'none' }}>
+              ✦ Generate AI Insights
+            </button>
+          </div>`}
+
+        ${aiState.loading && html`
+          <div class="card" style=${{ padding: '56px', textAlign: 'center' }}>
+            <div style=${{ fontSize: 40, marginBottom: 16, color: 'var(--accent)' }} class="pulse">✦</div>
+            <div style=${{ fontFamily: "var(--font-head)", fontSize: 20, letterSpacing: '.06em', color: 'var(--accent)', marginBottom: 8 }}>ANALYZING DATA…</div>
+            <div style=${{ color: mu, fontSize: 13 }}>Claude is processing result patterns</div>
+          </div>`}
+
+        ${aiState.data && html`<div>
+          ${aiState.data.summary && html`
+            <div class="card" style=${{ padding: '20px 24px', marginBottom: 16, borderLeft: '3px solid var(--accent)' }}>
+              <div style=${{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.09em', color: 'var(--accent)', marginBottom: 8, fontWeight: 600 }}>Executive Summary</div>
+              <p style=${{ fontSize: 14, lineHeight: 1.75, color: txt }}>${aiState.data.summary}</p>
+            </div>`}
+          <div style=${{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+            ${aiState.data.insights?.map((ins, i) => {
+            const colMap = { positive: 'var(--green)', warning: 'var(--gold)', critical: 'var(--red)', info: 'var(--accent)' };
+            const icoMap = { positive: '✓', warning: '⚠', critical: '✗', info: '◈' };
+            const c = colMap[ins.type] || 'var(--accent)';
+            return html`<div key=${i} class="card" style=${{ padding: '18px 20px', borderLeft: `3px solid ${c}` }}>
+                <div style=${{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <span style=${{ fontSize: 14, color: c, flexShrink: 0, marginTop: 1 }}>${icoMap[ins.type] || '◈'}</span>
+                  <div>
+                    <div style=${{ fontWeight: 600, fontSize: 13, marginBottom: 6, color: c }}>${ins.title}</div>
+                    <div style=${{ fontSize: 13, color: mu, lineHeight: 1.65 }}>${ins.detail}</div>
+                  </div>
+                </div>
+              </div>`;
+          })}
+          </div>
+          ${aiState.data.recommendations?.length > 0 && html`
+            <div class="card" style=${{ padding: '20px 24px', marginBottom: 16 }}>
+              <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 14 }}>RECOMMENDATIONS</div>
+              ${aiState.data.recommendations.map((rec, i) => html`
+                <div key=${i} style=${{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < aiState.data.recommendations.length - 1 ? `1px solid ${dark ? 'rgba(48,54,61,.5)' : 'rgba(0,0,0,.08)'}` : '' }} >
+                  <div style=${{ width: 24, height: 24, borderRadius: 6, background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--accent)', flexShrink: 0 }}>${i + 1}</div>
+                  <div style=${{ fontSize: 13, lineHeight: 1.65, color: txt }}>${rec}</div>
+                </div>`)}
+            </div>`}
+          <div style=${{ textAlign: 'center' }}>
+            <button onClick=${genAI} class="btn" style=${{ padding: '9px 22px', background: 'rgba(167,139,250,.08)', color: 'var(--accent)', border: '1px solid rgba(167,139,250,.2)', fontSize: 13 }}>↺ Regenerate</button>
+          </div>
+        </div>`}
+
+        ${aiState.err && html`
+          <div class="card" style=${{ padding: '32px', textAlign: 'center', borderLeft: '3px solid var(--red)' }}>
+            <div style=${{ color: 'var(--red)', fontWeight: 600, marginBottom: 8 }}>✗ Error</div>
+            <div style=${{ color: mu, fontSize: 13, marginBottom: 20 }}>${aiState.err}</div>
+            <button onClick=${genAI} class="btn" style=${{ padding: '9px 22px', background: 'rgba(244,63,94,.1)', color: 'var(--red)', border: '1px solid rgba(244,63,94,.25)', fontSize: 13 }}>Try Again</button>
+          </div>`}
+      </div>`}
+
+      </main>
+    </div>
+  </div>`;
+    }
+
+    // Basic deterrent for Right Click & Inspect
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.onkeydown = e => {
+      if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(KTUAnalyzer));
+  </script>
+</body>
+
+</html>

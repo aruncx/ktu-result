@@ -192,6 +192,15 @@
       const students = [];
       const subNameMap = {};
       let cur = null;
+      let collegeName = 'Unknown College';
+      let semNumber = 'Semester';
+
+      // ── Metadata Extraction (Exam Centre & Semester) ────────────
+      const collegeMatch = txt.match(/Exam\s+Centre:\s*([^\n\r]+)/i);
+      if (collegeMatch) collegeName = collegeMatch[1].trim();
+
+      const semMatch = txt.match(/B\.Tech\s+(S\d)/i) || txt.match(/(S\d)\s+Result/i);
+      if (semMatch) semNumber = semMatch[1].toUpperCase();
 
       const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
@@ -336,7 +345,7 @@
         if (!dm[d]) dm[d] = { code: d, name: DEPT_MAP[d] || d, students: [] };
         dm[d].students.push(s);
       });
-      return [{ id: 'uploaded', label: 'Uploaded Semester', departments: Object.values(dm) }];
+      return [{ id: 'uploaded', label: 'Uploaded Semester', departments: Object.values(dm), meta: { college: collegeName, semester: semNumber } }];
     }
 
     function finishStu(s) {
@@ -737,7 +746,8 @@
         });
 
         /* ── Download ─────────────────────────────────── */
-        XL.writeFile(wb, `KTU_Results_${semLabel.replace(/\s+/g, '_')}.xlsx`);
+        const filename = sem.meta ? `KTU ${sem.meta.semester} Results ${sem.meta.college}.xlsx` : `KTU_Results_${semLabel.replace(/\s+/g, '_')}.xlsx`;
+        XL.writeFile(wb, filename);
       };
 
       const genAI = async () => {

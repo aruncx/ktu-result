@@ -1850,8 +1850,10 @@
 
         /* ── Download ── */
         const allYrs = allStu.map(s => parseInt(s.admYear)).filter(y => !isNaN(y));
-        const yr = allYrs.length ? Math.max(...allYrs) : '';
-        XL.writeFile(wb, `AKTU_Results_${yr || 'Batch'}_Analysis.xlsx`);
+        const yr = allYrs.length ? Math.max(...allYrs) : 'Batch';
+        const allBrs = allStu.map(s => s.branchCode).filter(Boolean);
+        const br = allBrs.length ? allBrs[0] : '';
+        XL.writeFile(wb, `APJ AKTU Results ${yr} ${br} Analysis.xlsx`);
       } catch (err) {
         alert('Export failed: ' + err.message);
         console.error('Excel Export Error:', err);

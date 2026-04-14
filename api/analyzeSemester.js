@@ -274,8 +274,8 @@ async function exportExcelBase64(sem) {
       [`KTU RESULT ANALYSER – ${(sem.meta?.college || "Unknown College").toUpperCase()}`],
       [`Overall Department Summary – ${sem.meta?.semester || "Semester Details"}`],
       [],
-      ['Total Students', '', 'Passed', '', 'Failed', '', 'Pass %', 'Avg SGPA'],
-      [totS, '', totP, '', totF, '', (sem.ov?.pp || '0') + '%', sem.departments.reduce((a, d) => a + parseFloat(d.avgSGPA), 0) / sem.departments.length || 0],
+      ['Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA', '', '', ''],
+      [totS, totP, totF, (sem.ov?.pp || '0') + '%', sem.departments.reduce((a, d) => a + parseFloat(d.avgSGPA), 0) / sem.departments.length || 0, '', '', ''],
       [],
       ['Rank', 'Dept Code', 'Department Name', 'Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA'],
       ...dat
@@ -284,8 +284,6 @@ async function exportExcelBase64(sem) {
     ws['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: NC - 1 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } }, { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } }, { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } },
-      { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }, { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } }
     ];
     ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 35 }, { hpt: 25 }, { hpt: 10 }, { hpt: 20 }, { hpt: 30 }, { hpt: 12 }, { hpt: 26 }, ...mkRows(22, dat.length)];
     ws['!freeze'] = { xSplit: 0, ySplit: 7, topLeftCell: 'A8', activePane: 'bottomLeft', state: 'frozen' };
@@ -294,12 +292,12 @@ async function exportExcelBase64(sem) {
     styRange(ws, 0, 0, 0, NC - 1, S.title); 
     styRange(ws, 1, 0, 1, NC - 1, S.sheetSub);
     styRange(ws, 3, 0, 3, NC - 1, S.kpiLbl);
-    // Row 5 KPIs
-    styRange(ws, 4, 0, 4, 1, S.kpiBlue);  // Total
-    styRange(ws, 4, 2, 4, 3, S.kpiGreen); // Pass
-    styRange(ws, 4, 4, 4, 5, S.kpiRed);   // Fail
-    sty(ws, 4, 6, S.kpiGreen);           // Pass%
-    sty(ws, 4, 7, S.kpiBlue);            // SGPA
+    // Row 5 KPIs - Simplified to 1 column per metric for reliability
+    sty(ws, 4, 0, S.kpiBlue);  // Total
+    sty(ws, 4, 1, S.kpiGreen); // Pass
+    sty(ws, 4, 2, S.kpiRed);   // Fail
+    sty(ws, 4, 3, S.kpiGreen); // Pass%
+    sty(ws, 4, 4, S.kpiBlue);  // SGPA
     
     styRange(ws, 6, 0, 6, NC - 1, S.hdr);
     dat.forEach((row, ri) => {
@@ -342,7 +340,7 @@ async function exportExcelBase64(sem) {
       else if (type === 'sheetSub') styRange(ws, r, 0, r, NC - 1, S.sheetSub);
       else if (type === 'kpiLbl') styRange(ws, r, 0, r, NC - 1, S.kpiLbl);
       else if (type === 'kpiVal') {
-        styRange(ws, r, 0, 1, S.kpiBlue); styRange(ws, r, 2, 3, S.kpiBlue); styRange(ws, r, 4, 5, S.kpiGreen);
+        styRange(ws, r, 0, r, 1, S.kpiBlue); styRange(ws, r, 2, r, 3, S.kpiBlue); styRange(ws, r, 4, r, 5, S.kpiGreen);
       }
       else if (type === 'deptHdr') styRange(ws, r, 0, r, NC - 1, S.secGreen);
       else if (type === 'colHdr') { styRange(ws, r, 0, r, NC - 1, S.hdr); }
@@ -416,8 +414,7 @@ async function exportExcelBase64(sem) {
     aoa.push([`KTU RESULT ANALYSER – ${(sem.meta?.college || "Unknown College").toUpperCase()}`]); merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: maxC } }); rowH.push({ hpt: 35 });
     aoa.push([`${(dept.name || dept.code).toUpperCase()} – ${sem.meta?.semester || "Semester Details"}`]); merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: maxC } }); rowH.push({ hpt: 25 });
     aoa.push([]); rowH.push({ hpt: 10 });
-    aoa.push(['Total Students', '', 'Passed', '', 'Failed', 'Pass %', 'Avg SGPA', '']); merges.push({ s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }, { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 4 } }); // Adjusting labels below... actually simpler to do without complex merges for labels
-    aoa[3] = ['Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA', '', '', '']; rowH.push({ hpt: 20 });
+    aoa.push(['Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA', '', '', '']); rowH.push({ hpt: 20 });
     aoa.push([dept.tot, dept.pass, dept.fail, dept.pp + '%', dept.avgSGPA, '', '', '']); rowH.push({ hpt: 30 });
     aoa.push([]); rowH.push({ hpt: 12 });
     aoa.push(['📚  SUBJECT-WISE ANALYSIS']); merges.push({ s: { r: subSecR, c: 0 }, e: { r: subSecR, c: 5 } }); rowH.push({ hpt: 24 });

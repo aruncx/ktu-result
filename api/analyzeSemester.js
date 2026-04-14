@@ -242,7 +242,9 @@ async function exportExcelBase64(sem) {
     fail: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '7B1D1D' } }, fill: { fgColor: { rgb: 'F8D7DA' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'F5C6CB') },
     warn: { font: { name: 'Calibri', sz: 11, color: { rgb: '856404' } }, fill: { fgColor: { rgb: 'FFF3CD' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'FFEEBA') },
     gold: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '7B5200' } }, fill: { fgColor: { rgb: 'FFF3CD' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'FFEEBA') },
+    footer: { font: { name: 'Calibri', italic: true, sz: 10, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'EBF3FB' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' } },
   };
+  const CREDIT = 'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur';
 
   function sty(ws, r, c, style) { const ref = XL.utils.encode_cell({ r, c }); if (!ws[ref]) ws[ref] = { v: '', t: 's' }; ws[ref].s = style; }
   function styRange(ws, r1, c1, r2, c2, style) { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) sty(ws, r, c, style); }
@@ -252,12 +254,9 @@ async function exportExcelBase64(sem) {
   function sgpaS(sg, odd) { return sg >= 8 ? S.pass : sg < 5 ? S.fail : (odd ? S.odd : S.even); }
   function rowS(odd, text) { return odd ? (text ? S.oddL : S.odd) : (text ? S.evenL : S.even); }
   function addFooter(ws, aoa, nc) {
-    const cr = aoa.length + 49;
+    const cr = aoa.length + 20;
     const ref = XL.utils.encode_cell({ r: cr, c: 0 });
-    ws[ref] = {
-      v: 'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur', t: 's',
-      s: { font: { name: 'Calibri', italic: true, bold: false, sz: 10, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'EBF3FB' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: { bottom: { style: 'thin', color: { rgb: 'A0B8D8' } } } }
-    };
+    ws[ref] = { v: CREDIT, t: 's', s: S.footer };
     if (!ws['!merges']) ws['!merges'] = [];
     ws['!merges'].push({ s: { r: cr, c: 0 }, e: { r: cr, c: nc - 1 } });
     const rng = XL.utils.decode_range(ws['!ref'] || 'A1'); if (cr > rng.e.r) rng.e.r = cr; ws['!ref'] = XL.utils.encode_range(rng);

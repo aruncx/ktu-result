@@ -194,7 +194,7 @@
                     <h1 class="hero-title">Academic Result Intelligence</h1>
                     <p class="hero-desc">The ultimate analysis suite for KTU faculty and students. Choose a module to
                         begin deep-diving into performance metrics.</p>
-                    <div class="mode-grid">
+                    <div class="mode-grid" id="moduleGrid" style="display: none;">
                         <div class="mode-card" onclick="window.location.href='batch-analyzer.html'">
                             <div class="mode-icon">📊</div>
                             <h2 class="mode-name">Batch Result Analyser</h2>
@@ -211,6 +211,15 @@
                             <div style="margin-top: 20px; color: var(--accent); font-weight: 600; font-size: 13px;">Open
                                 Module →</div>
                         </div>
+                    </div>
+
+                    <div id="loginPrompt" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg2); border: 1px dashed var(--border); border-radius: 12px; padding: 40px 20px; margin-top: 20px; text-align: center;">
+                        <div style="font-size: 40px; margin-bottom: 15px;">🔒</div>
+                        <h2 style="font-size: 20px; color: var(--text1); margin-bottom: 10px;">Authentication Required</h2>
+                        <p style="color: var(--text3); font-size: 14px; max-width: 400px; line-height: 1.6;">You must sign in using your Google account to access the Semester and Batch Analytical Modules. All processing is strictly secured.</p>
+                        <button class="nav-item" onclick="login()" style="margin-top: 25px; background:var(--accent);color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(124,110,245,0.3);">
+                            <i class="fa-brands fa-google"></i> Sign In to Unlock Features
+                        </button>
                     </div>
                 </div>
 
@@ -259,6 +268,11 @@
         firebase.auth().onAuthStateChanged(u => {
             currentUser = u;
             document.getElementById('loginBtn').style.display = u ? 'none' : 'flex';
+            
+            // Toggle Modules vs Prompt Card
+            document.getElementById('moduleGrid').style.display = u ? 'grid' : 'none';
+            document.getElementById('loginPrompt').style.display = u ? 'none' : 'flex';
+
             const ui = document.getElementById('userInfo');
             if (ui) {
                 ui.style.display = u ? 'flex' : 'none';

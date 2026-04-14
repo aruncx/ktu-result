@@ -1,0 +1,9 @@
+{
+  "name": "ktu-analyzer-vrcl",
+  "version": "1.0.0",
+  "description": "Secure Vercel Backend APIs",
+  "dependencies": {
+    "pdf-parse": "^1.1.1",
+    "xlsx-js-style": "^1.2.0"
+  }
+}

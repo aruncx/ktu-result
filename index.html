@@ -34,6 +34,21 @@
     <!-- PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
+    <!-- Firebase (Web SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <script>
+        firebase.initializeApp({
+            projectId: "ktu-analysis-backend",
+            appId: "1:138350600894:web:b40f59de1071876e3874ef",
+            storageBucket: "ktu-analysis-backend.firebasestorage.app",
+            apiKey: "AIzaSyDR8aR6jEpgGXreqtWeEaXEAWdrfRyVxco",
+            authDomain: "ktu-analysis-backend.firebaseapp.com",
+            messagingSenderId: "138350600894"
+        });
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,6 +175,22 @@
 
             <main class="content" id="app-content">
                 <div id="view-home" class="hero-page fade-in">
+                    
+                    <div id="authContainer" style="margin-bottom: 30px; display: flex; justify-content: center; width: 100%;">
+                        <button class="nav-item" onclick="login()" id="loginBtn" style="background:#7c6ef5;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:16px;cursor:pointer;display:none;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(124,110,245,0.4);">
+                            <i class="fa-brands fa-google"></i> Sign in with Google to Start
+                        </button>
+                        <div id="userInfo" style="display:none; align-items:center; gap:15px; background:var(--surface); padding:10px 20px; border-radius:30px; border:1px solid var(--border);">
+                            <img id="userAvatar" src="" style="width:36px; height:36px; border-radius:50%; border:2px solid var(--accent)">
+                            <div style="text-align:left">
+                                <div style="font-size:12px; color:var(--text3)">Welcome back,</div>
+                                <div id="userName" style="font-size:14px; font-weight:700; color:var(--text)">User</div>
+                            </div>
+                            <div style="width:1px; height:24px; background:var(--border); margin:0 10px"></div>
+                            <button onclick="logout()" style="color:var(--text3);border:none;background:transparent;cursor:pointer;font-size:14px;font-weight:600">Sign Out</button>
+                        </div>
+                    </div>
+
                     <h1 class="hero-title">Academic Result Intelligence</h1>
                     <p class="hero-desc">The ultimate analysis suite for KTU faculty and students. Choose a module to
                         begin deep-diving into performance metrics.</p>
@@ -222,6 +253,24 @@
             }
         };
         window.onload = () => app.init();
+
+        // Firebase Auth Listener
+        let currentUser = null;
+        firebase.auth().onAuthStateChanged(u => {
+            currentUser = u;
+            document.getElementById('loginBtn').style.display = u ? 'none' : 'flex';
+            const ui = document.getElementById('userInfo');
+            if (ui) {
+                ui.style.display = u ? 'flex' : 'none';
+                if (u) {
+                    document.getElementById('userAvatar').src = u.photoURL;
+                    document.getElementById('userName').textContent = u.displayName ? u.displayName.split(' ')[0] : 'User';
+                }
+            }
+        });
+
+        function login() { firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        function logout() { firebase.auth().signOut(); window.location.reload(); }
 
         // Basic deterrent for Right Click & Inspect
         document.addEventListener('contextmenu', e => e.preventDefault());

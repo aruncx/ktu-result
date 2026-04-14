@@ -124,17 +124,19 @@
         if (!file || file.type !== 'application/pdf') { setUploadErr('Please upload a valid PDF file.'); return; }
         setLoading(true); setUploadErr('');
         try {
-          const uId = user.uid;
-          const storageRef = firebase.storage().ref('uploads/' + uId + '/' + Date.now() + '_' + file.name);
-          setLoadingMsg('☁️ Uploading PDF to cloud...');
-          await storageRef.put(file);
-          const fileUrl = await storageRef.getDownloadURL();
+          // Convert file to base64 for direct API upload
+          const reader = new FileReader();
+          const fileData = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
 
           setLoadingMsg('⚙️ Analyzing results on secure server...');
           const res = await fetch('/api/analyzeSemester', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileUrl })
+            body: JSON.stringify({ fileData, fileName: file.name })
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Server processing error');

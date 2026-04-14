@@ -234,16 +234,9 @@ module.exports = async function handler(req, res) {
     const { files } = req.body; 
     if (!files || !Array.isArray(files) || files.length === 0) return res.status(400).json({ error: 'Missing or empty files array in request' });
 
-    const semDataArr = [];
-    const fetchFn = typeof fetch !== 'undefined' ? fetch : nodeFetch;
-
     for (let f of files) {
-      if (!f.url) continue;
-      const fileRes = await fetchFn(f.url);
-      if (!fileRes.ok) throw new Error(`Failed to download ${f.label}`);
-      
-      const arrayBuffer = await fileRes.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      if (!f.base64) continue;
+      const buffer = Buffer.from(f.base64, 'base64');
       
       const wb = XLSX.read(buffer, { type: 'buffer' });
       const ws = wb.Sheets[wb.SheetNames[0]];

@@ -408,16 +408,11 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { fileUrl } = req.body;
-    if (!fileUrl) return res.status(400).json({ error: 'Missing fileUrl in request' });
+    const { fileData } = req.body;
+    if (!fileData) return res.status(400).json({ error: 'Missing fileData in request' });
 
-    // Download PDF from Firebase Storage URL
-    const fetchFn = typeof fetch !== 'undefined' ? fetch : nodeFetch;
-    const pdfResponse = await fetchFn(fileUrl);
-    if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
-    
-    const arrayBuffer = await pdfResponse.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Process direct base64 data (bypassing storage download)
+    const buffer = Buffer.from(fileData, 'base64');
 
     // Parse PDF Text
     const data = await pdf(buffer);

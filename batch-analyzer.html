@@ -290,19 +290,20 @@
       if (!loaded.length) { alert('Please upload at least one semester file.'); return; }
       
       const btn = document.getElementById('xlsxBtn');
-      if (btn) btn.innerHTML = '⚙️ Processing in Cloud...';
+      if (btn) btn.innerHTML = '⚙️ Analyzing Data...';
 
       try {
-        const uId = currentUser.uid;
-        const uploadPromises = loaded.map(async s => {
-          const fileName = Date.now() + '_' + s.fileName;
-          const storageRef = firebase.storage().ref('uploads/' + uId + '/' + fileName);
-          await storageRef.put(s.file);
-          const url = await storageRef.getDownloadURL();
-          return { label: s.label, url };
+        const promises = loaded.map(async s => {
+          const reader = new FileReader();
+          const base64 = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(s.file);
+          });
+          return { label: s.label, base64, fileName: s.fileName };
         });
         
-        const filesObj = await Promise.all(uploadPromises);
+        const filesObj = await Promise.all(promises);
 
         const res = await fetch('/api/analyzeBatch', {
           method: 'POST',

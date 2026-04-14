@@ -312,9 +312,8 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Server processing error');
 
-        const excelRef = firebase.storage().ref('reports/' + uId + '/' + Date.now() + '_' + data.excelFilename);
-        await excelRef.putString(data.excelBase64, 'base64', { contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        window.latestExcelUrl = await excelRef.getDownloadURL();
+        // Store excel data for direct browser download — no storage needed
+        window._excelData = { base64: data.excelBase64, filename: data.excelFilename };
 
         // Update local globals so the UI renders perfectly!
         semData = data.analysis.semData;
@@ -1343,8 +1342,17 @@
     }
 
     function exportReport() {
-      if (window.latestExcelUrl) window.open(window.latestExcelUrl, '_blank');
-      else alert('No report available. Please click analyze first.');
+      if (!window._excelData) return alert('No report available. Please click analyze first.');
+      const { base64, filename } = window._excelData;
+      const byteChars = atob(base64);
+      const byteArr = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
     
     function goPage(pageId, btn) {

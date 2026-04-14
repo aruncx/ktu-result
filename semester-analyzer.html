@@ -140,9 +140,8 @@
           if (!res.ok) throw new Error(data.error || 'Server processing error');
 
           setLoadingMsg('📊 Generating Excel report...');
-          const excelRef = firebase.storage().ref('reports/' + uId + '/' + Date.now() + '_' + data.excelFilename);
-          await excelRef.putString(data.excelBase64, 'base64', { contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-          window.latestExcelUrl = await excelRef.getDownloadURL();
+          // Convert base64 directly to browser download — no storage needed
+          window._excelData = { base64: data.excelBase64, filename: data.excelFilename };
 
           setRawSems(data.analysis); setAnalysis(data.analysis); setTab('overview'); setSelSem(0);
         } catch (e) { setUploadErr('Error: ' + e.message); }
@@ -159,7 +158,19 @@
         return byDept.filter(s => s.regNo.toLowerCase().includes(search.toLowerCase()));
       }, [sem, search, deptFilter]);
 
-      const exportExcel = () => { if (window.latestExcelUrl) window.open(window.latestExcelUrl, '_blank'); };
+      const exportExcel = () => {
+        if (!window._excelData) return;
+        const { base64, filename } = window._excelData;
+        const byteChars = atob(base64);
+        const byteArr = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([byteArr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
 
       const genAI = async () => {
         if (!sem) return; setAiState({ loading: true, data: null, err: null });

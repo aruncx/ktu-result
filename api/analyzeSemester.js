@@ -229,9 +229,14 @@ async function exportExcelBase64(sem) {
   const semLabel = sem.label || 'Semester';
   const bd = (s = 'thin', c = 'CCCCCC') => ({ top: { style: s, color: { rgb: c } }, bottom: { style: s, color: { rgb: c } }, left: { style: s, color: { rgb: c } }, right: { style: s, color: { rgb: c } } });
   const S = {
-    title: { font: { name: 'Calibri', bold: true, sz: 16, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'D6E4F7' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'A0B8D8') },
+    title: { font: { name: 'Calibri', bold: true, sz: 16, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1A3A6E' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' } },
     info: { font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '3A4D6B' } }, fill: { fgColor: { rgb: 'EBF3FB' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'C0D4EE') },
     hdr: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1B4F9B' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bd('medium', '1B4F9B') },
+    sheetSub: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'D6E4F7' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'A0B8D8') },
+    kpiLbl: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '444444' } }, fill: { fgColor: { rgb: 'F2F2F2' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'DDDDDD') },
+    kpiBlue: { font: { name: 'Calibri', bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1B4F9B' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', '1B4F9B') },
+    kpiGreen: { font: { name: 'Calibri', bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '28A745' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', '28A745') },
+    kpiRed: { font: { name: 'Calibri', bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'DC3545' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'DC3545') },
     secGreen: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2D6A4F' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: bd('thin', '2D6A4F') },
     secBlue: { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1B3A6B' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' }, border: bd('thin', '1B3A6B') },
     even: { font: { name: 'Calibri', sz: 11 }, fill: { fgColor: { rgb: 'FFFFFF' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd() },
@@ -263,13 +268,15 @@ async function exportExcelBase64(sem) {
   }
 
   (() => {
-    const NC = 8, totS = sem.departments.reduce((a, d) => a + d.tot, 0), totP = sem.departments.reduce((a, d) => a + d.pass, 0);
+    const NC = 8, totS = sem.departments.reduce((a, d) => a + d.tot, 0), totP = sem.departments.reduce((a, d) => a + d.pass, 0), totF = totS - totP;
     const dat = sem.departments.map((d, i) => [i + 1, d.code, d.name || DEPT_MAP[d.code] || d.code, d.tot, d.pass, d.fail, parseFloat(d.pp), parseFloat(d.avgSGPA)]);
     const aoa = [
-      ["KTU RESULT ANALYSER - OVERALL DEPARTMENT SUMMARY"],
-      [sem.meta?.college || "Unknown College"],
-      [sem.meta?.semester || "Semester Details"],
-      [`Departments: ${sem.departments.length}   |   Total Students: ${totS}   |   Passed: ${totP}   |   Overall Pass%: ${sem.ov?.pp || '—'}%`],
+      [`KTU RESULT ANALYSER – ${(sem.meta?.college || "Unknown College").toUpperCase()}`],
+      [`Overall Department Summary – ${sem.meta?.semester || "Semester Details"}`],
+      [],
+      ['Total Students', '', 'Passed', '', 'Failed', '', 'Pass %', 'Avg SGPA'],
+      [totS, '', totP, '', totF, '', (sem.ov?.pp || '0') + '%', sem.departments.reduce((a, d) => a + parseFloat(d.avgSGPA), 0) / sem.departments.length || 0],
+      [],
       ['Rank', 'Dept Code', 'Department Name', 'Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA'],
       ...dat
     ];
@@ -277,18 +284,26 @@ async function exportExcelBase64(sem) {
     ws['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: NC - 1 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: NC - 1 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: NC - 1 } }
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } }, { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } }, { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } },
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }, { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } }
     ];
-    ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 32 }, { hpt: 20 }, { hpt: 20 }, { hpt: 18 }, { hpt: 24 }, ...mkRows(21, dat.length)];
-    ws['!freeze'] = { xSplit: 0, ySplit: 5, topLeftCell: 'A6', activePane: 'bottomLeft', state: 'frozen' };
-    ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 4, c: 0 }, e: { r: 4 + dat.length, c: NC - 1 } }) };
+    ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 35 }, { hpt: 25 }, { hpt: 10 }, { hpt: 20 }, { hpt: 30 }, { hpt: 12 }, { hpt: 26 }, ...mkRows(22, dat.length)];
+    ws['!freeze'] = { xSplit: 0, ySplit: 7, topLeftCell: 'A8', activePane: 'bottomLeft', state: 'frozen' };
+    ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 6, c: 0 }, e: { r: 6 + dat.length, c: NC - 1 } }) };
+    
     styRange(ws, 0, 0, 0, NC - 1, S.title); 
-    styRange(ws, 1, 0, 2, NC - 1, S.info); 
-    styRange(ws, 3, 0, 3, NC - 1, S.info);
-    styRange(ws, 4, 0, 4, NC - 1, S.hdr);
+    styRange(ws, 1, 0, 1, NC - 1, S.sheetSub);
+    styRange(ws, 3, 0, 3, NC - 1, S.kpiLbl);
+    // Row 5 KPIs
+    styRange(ws, 4, 0, 4, 1, S.kpiBlue);  // Total
+    styRange(ws, 4, 2, 4, 3, S.kpiGreen); // Pass
+    styRange(ws, 4, 4, 4, 5, S.kpiRed);   // Fail
+    sty(ws, 4, 6, S.kpiGreen);           // Pass%
+    sty(ws, 4, 7, S.kpiBlue);            // SGPA
+    
+    styRange(ws, 6, 0, 6, NC - 1, S.hdr);
     dat.forEach((row, ri) => {
-      const r = 5 + ri, odd = ri % 2 === 1;
+      const r = 7 + ri, odd = ri % 2 === 1;
       row.forEach((v, ci) => {
         let st;
         if (ci === 0 && ri === 0) st = S.gold;
@@ -309,12 +324,13 @@ async function exportExcelBase64(sem) {
     const totalSubs = sem.departments.reduce((a, d) => a + d.subjects.length, 0);
     const aoa = []; const merges = []; const rowH = []; const rowStyles = [];
     let cr = 0;
-    aoa.push(["KTU RESULT ANALYSER - SUBJECT-WISE PERFORMANCE ANALYSIS"]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 32 }); rowStyles.push('sheetTitle'); cr++;
-    aoa.push([sem.meta?.college || "Unknown College"]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 20 }); rowStyles.push('info'); cr++;
-    aoa.push([sem.meta?.semester || "Semester Details"]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 20 }); rowStyles.push('info'); cr++;
-    aoa.push([`Total Subjects: ${totalSubs}   |   Departments: ${sem.departments.length}`]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 18 }); rowStyles.push('info'); cr++;
+    aoa.push([`KTU RESULT ANALYSER – ${(sem.meta?.college || "Unknown College").toUpperCase()}`]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 35 }); rowStyles.push('sheetTitle'); cr++;
+    aoa.push([`Subject-wise Performance Analysis – ${sem.meta?.semester || "Semester Details"}`]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 25 }); rowStyles.push('sheetSub'); cr++;
+    aoa.push([]); rowH.push({ hpt: 10 }); rowStyles.push('gap'); cr++;
+    aoa.push(['Total Subjects', '', 'Departments', '', 'Overall Status', '']); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: 1 } }, { s: { r: cr, c: 2 }, e: { r: cr, c: 3 } }, { s: { r: cr, c: 4 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 20 }); rowStyles.push('kpiLbl'); cr++;
+    aoa.push([totalSubs, '', sem.departments.length, '', (sem.ov?.pp || '0') + '% Pass', '']); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: 1 } }, { s: { r: cr, c: 2 }, e: { r: cr, c: 3 } }, { s: { r: cr, c: 4 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 30 }); rowStyles.push('kpiVal'); cr++;
     sem.departments.forEach((d, di) => {
-      if (di >= 0) { aoa.push([]); rowH.push({ hpt: 12 }); rowStyles.push('gap'); cr++; }
+      aoa.push([]); rowH.push({ hpt: 12 }); rowStyles.push('gap'); cr++;
       const deptLabel = `${d.code}  —  ${d.name || DEPT_MAP[d.code] || d.code}   (${d.subjects.length} subjects, Pass%: ${d.pp}%)`;
       aoa.push([deptLabel]); merges.push({ s: { r: cr, c: 0 }, e: { r: cr, c: NC - 1 } }); rowH.push({ hpt: 24 }); rowStyles.push('deptHdr'); cr++;
       aoa.push(subHdrs); rowH.push({ hpt: 22 }); rowStyles.push('colHdr'); cr++;
@@ -323,7 +339,11 @@ async function exportExcelBase64(sem) {
     const ws = XL.utils.aoa_to_sheet(aoa); ws['!merges'] = merges; ws['!cols'] = autoW(aoa); ws['!rows'] = rowH;
     rowStyles.forEach((type, r) => {
       if (type === 'sheetTitle') styRange(ws, r, 0, r, NC - 1, S.title);
-      else if (type === 'info') styRange(ws, r, 0, r, NC - 1, S.info);
+      else if (type === 'sheetSub') styRange(ws, r, 0, r, NC - 1, S.sheetSub);
+      else if (type === 'kpiLbl') styRange(ws, r, 0, r, NC - 1, S.kpiLbl);
+      else if (type === 'kpiVal') {
+        styRange(ws, r, 0, 1, S.kpiBlue); styRange(ws, r, 2, 3, S.kpiBlue); styRange(ws, r, 4, 5, S.kpiGreen);
+      }
       else if (type === 'deptHdr') styRange(ws, r, 0, r, NC - 1, S.secGreen);
       else if (type === 'colHdr') { styRange(ws, r, 0, r, NC - 1, S.hdr); }
       else if (type === 'even' || type === 'odd') {
@@ -345,29 +365,30 @@ async function exportExcelBase64(sem) {
     sem.departments.forEach(d => d.students.forEach(s => dat.push([s.regNo, s.department, d.name || DEPT_MAP[s.department] || s.department, parseFloat(s.sgpa), s.allPassed ? 'PASS' : 'FAIL'])));
     const totP = dat.filter(r => r[4] === 'PASS').length; const pct = dat.length ? ((totP / dat.length) * 100).toFixed(1) : 0;
     const aoa = [
-      ["KTU RESULT ANALYSER - COMPLETE STUDENT RESULTS"],
-      [sem.meta?.college || "Unknown College"],
-      [sem.meta?.semester || "Semester Details"],
-      [`Total Students: ${dat.length}   |   Passed: ${totP}   |   Failed: ${dat.length - totP}   |   Pass%: ${pct}%`],
+      [`KTU RESULT ANALYSER – ${(sem.meta?.college || "Unknown College").toUpperCase()}`],
+      [`Complete Student Results – ${sem.meta?.semester || "Semester Details"}`],
+      [],
+      ['Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA'],
+      [dat.length, totP, dat.length - totP, pct + '%', sem.ov?.avgSGPA || '0'],
+      [],
       ['Register No', 'Dept Code', 'Department Name', 'SGPA', 'Status'],
       ...dat
     ];
     const ws = XL.utils.aoa_to_sheet(aoa);
     ws['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: NC - 1 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: NC - 1 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: NC - 1 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: NC - 1 } }
+      { s: { r: 1, c: 0 }, e: { r: 1, c: NC - 1 } }
     ];
-    ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 32 }, { hpt: 20 }, { hpt: 20 }, { hpt: 18 }, { hpt: 24 }, ...mkRows(21, dat.length)];
-    ws['!freeze'] = { xSplit: 0, ySplit: 5, topLeftCell: 'A6', activePane: 'bottomLeft', state: 'frozen' };
-    ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 4, c: 0 }, e: { r: 4 + dat.length, c: NC - 1 } }) };
+    ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 35 }, { hpt: 25 }, { hpt: 10 }, { hpt: 20 }, { hpt: 30 }, { hpt: 12 }, { hpt: 26 }, ...mkRows(21, dat.length)];
+    ws['!freeze'] = { xSplit: 0, ySplit: 7, topLeftCell: 'A8', activePane: 'bottomLeft', state: 'frozen' };
+    ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 6, c: 0 }, e: { r: 6 + dat.length, c: NC - 1 } }) };
     styRange(ws, 0, 0, 0, NC - 1, S.title); 
-    styRange(ws, 1, 0, 2, NC - 1, S.info); 
-    styRange(ws, 3, 0, 3, NC - 1, S.info); 
-    styRange(ws, 4, 0, 4, NC - 1, S.hdr);
+    styRange(ws, 1, 0, 1, NC - 1, S.sheetSub); 
+    styRange(ws, 3, 0, 3, NC - 1, S.kpiLbl);
+    sty(ws, 4, 0, S.kpiBlue); sty(ws, 4, 1, S.kpiGreen); sty(ws, 4, 2, S.kpiRed); sty(ws, 4, 3, S.kpiGreen); sty(ws, 4, 4, S.kpiBlue);
+    styRange(ws, 6, 0, 6, NC - 1, S.hdr);
     dat.forEach((row, ri) => {
-      const r = 5 + ri, odd = ri % 2 === 1;
+      const r = 7 + ri, odd = ri % 2 === 1;
       row.forEach((v, ci) => {
         let st;
         if (ci === 4) st = v === 'PASS' ? S.pass : S.fail;
@@ -389,13 +410,15 @@ async function exportExcelBase64(sem) {
 
     const nSubs = dept.subjects.length; const allCodes = [...new Set(dept.students.flatMap(s => s.subjects.map(x => x.code)))];
     const nStuCols = allCodes.length + 3; const maxC = Math.max(nStuCols, 8) - 1;
-    const mainHeadR = 0, collHeadR = 1, examHeadR = 2, infoHeadR = 3;
-    const subSecR = 5, subHdrR = 6, subDatR = 7, stuSecR = subDatR + nSubs + 1, stuHdrR = stuSecR + 1, stuDatR = stuHdrR + 1;
+    const mainHeadR = 0, collHeadR = 1, kpiLblR = 3, kpiValR = 4;
+    const subSecR = 6, subHdrR = 7, subDatR = 8, stuSecR = subDatR + nSubs + 1, stuHdrR = stuSecR + 1, stuDatR = stuHdrR + 1;
     const aoa = []; const merges = []; const rowH = [];
-    aoa.push([`KTU RESULT ANALYSER - ${(dept.name || dept.code).toUpperCase()} FULL ANALYSIS`]); merges.push({ s: { r: mainHeadR, c: 0 }, e: { r: mainHeadR, c: maxC } }); rowH.push({ hpt: 32 });
-    aoa.push([sem.meta?.college || "Unknown College"]); merges.push({ s: { r: collHeadR, c: 0 }, e: { r: collHeadR, c: maxC } }); rowH.push({ hpt: 20 });
-    aoa.push([sem.meta?.semester || "Semester Details"]); merges.push({ s: { r: examHeadR, c: 0 }, e: { r: examHeadR, c: maxC } }); rowH.push({ hpt: 20 });
-    aoa.push([`Total: ${dept.tot} | Pass: ${dept.pass} | Fail: ${dept.fail} | Pass%: ${dept.pp}% | SGPA: ${dept.avgSGPA}`]); merges.push({ s: { r: infoHeadR, c: 0 }, e: { r: infoHeadR, c: maxC } }); rowH.push({ hpt: 18 });
+    aoa.push([`KTU RESULT ANALYSER – ${(sem.meta?.college || "Unknown College").toUpperCase()}`]); merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: maxC } }); rowH.push({ hpt: 35 });
+    aoa.push([`${(dept.name || dept.code).toUpperCase()} – ${sem.meta?.semester || "Semester Details"}`]); merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: maxC } }); rowH.push({ hpt: 25 });
+    aoa.push([]); rowH.push({ hpt: 10 });
+    aoa.push(['Total Students', '', 'Passed', '', 'Failed', 'Pass %', 'Avg SGPA', '']); merges.push({ s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }, { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } }, { s: { r: 4, c: 4 }, e: { r: 4, c: 4 } }); // Adjusting labels below... actually simpler to do without complex merges for labels
+    aoa[3] = ['Total Students', 'Passed', 'Failed', 'Pass %', 'Avg SGPA', '', '', '']; rowH.push({ hpt: 20 });
+    aoa.push([dept.tot, dept.pass, dept.fail, dept.pp + '%', dept.avgSGPA, '', '', '']); rowH.push({ hpt: 30 });
     aoa.push([]); rowH.push({ hpt: 12 });
     aoa.push(['📚  SUBJECT-WISE ANALYSIS']); merges.push({ s: { r: subSecR, c: 0 }, e: { r: subSecR, c: 5 } }); rowH.push({ hpt: 24 });
     aoa.push(['Subject Code', 'Subject Name', 'Total Appeared', 'Passed', 'Failed', 'Pass %']); rowH.push({ hpt: 22 });
@@ -411,8 +434,9 @@ async function exportExcelBase64(sem) {
     ws['!freeze'] = { xSplit: 0, ySplit: stuHdrR + 1, topLeftCell: `A${stuHdrR + 2}`, activePane: 'bottomLeft', state: 'frozen' };
     ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: stuHdrR, c: 0 }, e: { r: stuDatR + dept.students.length - 1, c: nStuCols - 1 } }) };
     styRange(ws, 0, 0, 0, maxC, S.title); 
-    styRange(ws, 1, 0, 2, maxC, S.info);
-    styRange(ws, 3, 0, 3, S.info);
+    styRange(ws, 1, 0, 1, maxC, S.sheetSub);
+    styRange(ws, 3, 0, 3, maxC, S.kpiLbl);
+    sty(ws, 4, 0, S.kpiBlue); sty(ws, 4, 1, S.kpiGreen); sty(ws, 4, 2, S.kpiRed); sty(ws, 4, 3, S.kpiGreen); sty(ws, 4, 4, S.kpiBlue);
     styRange(ws, subSecR, 0, subSecR, 5, S.secGreen);
     styRange(ws, subHdrR, 0, subHdrR, 5, S.hdr); 
     styRange(ws, stuSecR, 0, stuSecR, nStuCols - 1, S.secBlue); 

@@ -111,22 +111,33 @@ function parseTxt(txt) {
     const words = raw.split(/\s+/);
 
     // 1. Precise Match: "CODE Name" or "CODE : Name" on one line
-    const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]\s*([A-Z][A-Z\d\s,.:/()&~-]{5,150})/i);
+    const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]+\s*([A-Za-z0-9].*)/i);
     if (subDefMatch && !REG_RE.test(raw)) {
       const code = subDefMatch[1].toUpperCase();
       const name = subDefMatch[2].trim();
-      if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
-      lastSubCode = code; // Track for potential multi-line continuation
+      
+      const looksLikeGrades = /^[A-Z\+]{1,2}\s+[A-Z]{2,6}\d{3,4}/i.test(name) || /\([A-Za-z+]{1,2}\)/.test(name) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(name);
+      const isJustGrade = GRADE_RE.test(cleanGrade(name));
+      
+      if (!looksLikeGrades && !isJustGrade) {
+        if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
+        lastSubCode = code; // Track for potential multi-line continuation
+      }
     } 
     // 2. Loose Match: Line starts with CODE, then empty, then name might be on next line
     else if (CODE_RE.test(words[0]) && words.length === 1) {
       lastSubCode = words[0].toUpperCase();
     }
     // 3. Multi-line continuation: If we have a pending code and this line looks like a name
-    else if (lastSubCode && raw.length > 10 && !CODE_RE.test(words[0]) && !GRADE_RE.test(cleanGrade(words[words.length-1]))) {
-      const existing = subNameMap[lastSubCode] || '';
-      if (existing === 'Subject' || existing === '') subNameMap[lastSubCode] = raw;
-      else subNameMap[lastSubCode] = existing + ' ' + raw;
+    else if (lastSubCode && raw.length > 5 && !CODE_RE.test(words[0]) && !GRADE_RE.test(cleanGrade(words[words.length-1]))) {
+      const isRecordContinuation = /\([A-Za-z+]{1,2}\)/.test(raw) || /^[A-Z]{2,6}\d{3,4}[A-Z]?\s+[A-Za-z+]{1,2}\b/.test(raw) || REG_RE.test(raw) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(raw);
+      if (!isRecordContinuation) {
+        const existing = subNameMap[lastSubCode] || '';
+        if (existing === 'Subject' || existing === '') subNameMap[lastSubCode] = raw;
+        else subNameMap[lastSubCode] = existing + ' ' + raw;
+      } else {
+        lastSubCode = null;
+      }
       // Keep lastSubCode for possible 3rd line of name
     } else {
       lastSubCode = null; // Reset if we see something else

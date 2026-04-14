@@ -13,64 +13,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>AKTU Semester Result Analyzer – Instant PDF to Excel Analysis</title>
-  <meta name="description"
-    content="Instantly analyze APJ AKTU semester results. Upload official PDFs to generate department rankings, subject difficulty scores, and interactive performance analytics in seconds." />
+  <meta name="description" content="Instantly analyze APJ AKTU semester results. Upload official PDFs to generate department rankings, subject difficulty scores, and interactive performance analytics in seconds." />
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48x48.png">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/unified.css">
   <style>
-    /* Design System Overlay for Semester Analyzer */
-    .card {
-      background: var(--surface) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: all 0.3s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 0 20px rgba(var(--accent-rgb, 99, 102, 241), 0.15);
-      border-color: var(--accent) !important;
-    }
-
-    /* Floating Panels with subtle glow */
-    .upload-panel,
-    .floating-panel {
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-      border-radius: 20px;
-      backdrop-filter: blur(16px);
-      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    }
-
-    .upload-panel:hover {
-      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.12), 0 0 30px rgba(var(--accent-rgb, 99, 102, 241), 0.2);
-    }
-
-    /* Subtle Gradients and Glow Effects on buttons & icons */
-    .nav-item,
-    .btn {
-      transition: all 0.3s ease-in-out;
-    }
-
-    .nav-item:hover {
-      background: linear-gradient(90deg, rgba(var(--accent-rgb, 99, 102, 241), 0.1) 0%, transparent 100%);
-      text-shadow: 0 0 10px rgba(var(--accent-rgb, 99, 102, 241), 0.5);
-    }
-
-    .btn:hover {
-      box-shadow: 0 4px 15px rgba(var(--accent-rgb, 99, 102, 241), 0.3);
-      filter: brightness(1.1);
-    }
+    .card { background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.05); backdrop-filter: blur(12px); transition: all 0.3s ease-in-out; }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 0 20px rgba(124,110,245,0.15); border-color: var(--accent) !important; }
+    .btn:hover { box-shadow: 0 4px 15px rgba(124,110,245,0.3); filter: brightness(1.1); }
+    .nav-active { background: linear-gradient(90deg, rgba(124,110,245,0.15) 0%, transparent 100%) !important; color: var(--accent) !important; border-left: 3px solid var(--accent); }
   </style>
 </head>
 
@@ -97,78 +53,59 @@
     });
   </script>
 
-  <!-- Recharts (depends on React, Prop-Types) -->
+  <!-- Recharts -->
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
   <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
 
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-
   <script>
-    /* ── Setup ──────────────────────────────────────────────────────── */
+    /* ── Setup ── */
     const html = htm.bind(React.createElement);
     const { useState, useCallback, useEffect, useRef, useMemo } = React;
     const RC = window.Recharts;
 
-    if (window.pdfjsLib) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
-
-    /* Core analytical logic moved to secure Vercel API */
-
-    /* ── TINY COMPONENTS ────────────────────────────────────────────── */
+    /* ── TINY COMPONENTS ── */
     function CTip({ active, payload, label }) {
       if (!active || !payload?.length) return null;
       return html`<div style=${{ background: '#161b22', border: '1px solid #30363d', borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
-    <p style=${{ color: '#8b949e', marginBottom: 4 }}>${label}</p>
-    ${payload.map((p, i) => html`<p key=${i} style=${{ color: p.color, margin: '2px 0' }}>${p.name}: <strong>${typeof p.value === 'number' ? p.value.toFixed(1) : p.value}%</strong></p>`)}
-  </div>`;
+        <p style=${{ color: '#8b949e', marginBottom: 4 }}>${label}</p>
+        ${payload.map((p, i) => html`<p key=${i} style=${{ color: p.color, margin: '2px 0' }}>${p.name}: <strong>${typeof p.value === 'number' ? p.value.toFixed(1) : p.value}%</strong></p>`)}
+      </div>`;
     }
     function ProgBar({ pct, color = 'var(--green)', h = 6 }) {
       return html`<div style=${{ height: h, borderRadius: h / 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', width: '100%' }}>
-    <div style=${{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: h / 2, transition: 'width .8s ease' }}/>
-  </div>`;
+        <div style=${{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: h / 2, transition: 'width .8s ease' }}/>
+      </div>`;
     }
     function Badge({ label, ok }) {
-      return html`<span style=${{
-        display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-        background: ok ? 'rgba(16,217,168,.15)' : 'rgba(244,63,94,.15)', color: ok ? 'var(--green)' : 'var(--red)',
-        border: `1px solid ${ok ? 'rgba(16,217,168,.3)' : 'rgba(244,63,94,.3)'}`
-      }}>${label}</span>`;
+      return html`<span style=${{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: ok ? 'rgba(16,217,168,.15)' : 'rgba(244,63,94,.15)', color: ok ? 'var(--green)' : 'var(--red)', border: `1px solid ${ok ? 'rgba(16,217,168,.3)' : 'rgba(244,63,94,.3)'}` }}>${label}</span>`;
     }
     function StatCard({ icon, label, value, color = 'var(--accent)', dark }) {
-      return html`<div style=${{
-        background: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-        border: `1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}`,
-        borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16
-      }}>
-    <div style=${{ width: 48, height: 48, borderRadius: 10, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>${icon}</div>
-    <div>
-      <div style=${{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: dark ? '#8b949e' : '#64748b', marginBottom: 4 }}>${label}</div>
-      <div style=${{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color }}>${value}</div>
-    </div>
-  </div>`;
+      return html`<div style=${{ background: dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', border: `1px solid ${dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}`, borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style=${{ width: 48, height: 48, borderRadius: 10, background: `${color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>${icon}</div>
+        <div>
+          <div style=${{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em', color: dark ? '#8b949e' : '#64748b', marginBottom: 4 }}>${label}</div>
+          <div style=${{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 700, color }}>${value}</div>
+        </div>
+      </div>`;
     }
 
-    /* ── MAIN APP ───────────────────────────────────────────────────── */
+    /* ── MAIN APP ── */
     function KTUAnalyzer() {
       const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'dark');
       const dark = theme === 'dark' || theme === 'medium';
-
       const toggleTheme = useCallback(() => {
         const themes = ['dark', 'medium', 'light'];
-        const current = document.documentElement.getAttribute('data-theme') || 'dark';
-        const next = themes[(themes.indexOf(current) + 1) % themes.length];
-        document.documentElement.setAttribute('data-theme', next);
-        setTheme(next);
+        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = themes[(themes.indexOf(cur) + 1) % themes.length];
+        document.documentElement.setAttribute('data-theme', next); setTheme(next);
       }, []);
+
       const [tab, setTab] = useState('upload');
       const [rawSems, setRawSems] = useState(null);
       const [analysis, setAnalysis] = useState(null);
       const [selSem, setSelSem] = useState(0);
       const [loading, setLoading] = useState(false);
+      const [loadingMsg, setLoadingMsg] = useState('Processing...');
       const [dragOver, setDragOver] = useState(false);
       const [uploadErr, setUploadErr] = useState('');
       const [search, setSearch] = useState('');
@@ -178,27 +115,22 @@
       const [authLoading, setAuthLoading] = useState(true);
       const fileRef = useRef();
 
-      useEffect(() => {
-        return firebase.auth().onAuthStateChanged(u => {
-          setUser(u);
-          setAuthLoading(false);
-        });
-      }, []);
-
+      useEffect(() => { return firebase.auth().onAuthStateChanged(u => { setUser(u); setAuthLoading(false); }); }, []);
       const login = () => firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
       const logout = () => { firebase.auth().signOut(); setAnalysis(null); setTab('upload'); };
 
       const handleFile = useCallback(async (file) => {
-        if (!user) { setUploadErr('You must login to upload files.'); return; }
+        if (!user) { setUploadErr('You must login via Google to upload files.'); return; }
         if (!file || file.type !== 'application/pdf') { setUploadErr('Please upload a valid PDF file.'); return; }
         setLoading(true); setUploadErr('');
         try {
           const uId = user.uid;
-          const fileName = Date.now() + '_' + file.name;
-          const storageRef = firebase.storage().ref('uploads/' + uId + '/' + fileName);
+          const storageRef = firebase.storage().ref('uploads/' + uId + '/' + Date.now() + '_' + file.name);
+          setLoadingMsg('☁️ Uploading PDF to cloud...');
           await storageRef.put(file);
           const fileUrl = await storageRef.getDownloadURL();
 
+          setLoadingMsg('⚙️ Analyzing results on secure server...');
           const res = await fetch('/api/analyzeSemester', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -207,101 +139,46 @@
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Server processing error');
 
+          setLoadingMsg('📊 Generating Excel report...');
           const excelRef = firebase.storage().ref('reports/' + uId + '/' + Date.now() + '_' + data.excelFilename);
           await excelRef.putString(data.excelBase64, 'base64', { contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
           window.latestExcelUrl = await excelRef.getDownloadURL();
 
           setRawSems(data.analysis); setAnalysis(data.analysis); setTab('overview'); setSelSem(0);
-        } catch (e) { setUploadErr('API error: ' + e.message); }
+        } catch (e) { setUploadErr('Error: ' + e.message); }
         setLoading(false);
       }, [user]);
 
       const onDrop = useCallback(e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }, [handleFile]);
       const sem = analysis?.[selSem];
-
       const filteredStudents = useMemo(() => {
         if (!sem) return [];
         const all = sem.departments.flatMap(d => d.students);
         const byDept = deptFilter === 'ALL' ? all : all.filter(s => s.department === deptFilter);
         if (!search) return byDept;
-        const q = search.toLowerCase();
-        return byDept.filter(s => s.regNo.toLowerCase().includes(q));
+        return byDept.filter(s => s.regNo.toLowerCase().includes(search.toLowerCase()));
       }, [sem, search, deptFilter]);
 
-      const exportExcel = () => {
-        if (window.latestExcelUrl) window.open(window.latestExcelUrl, '_blank');
-      };
+      const exportExcel = () => { if (window.latestExcelUrl) window.open(window.latestExcelUrl, '_blank'); };
 
       const genAI = async () => {
         if (!sem) return; setAiState({ loading: true, data: null, err: null });
-        // Simulate thinking time for a premium experience
         await new Promise(r => setTimeout(r, 1500));
         try {
-          const topDept = sem.ov.best;
-          const bottomDept = sem.ov.worst;
-          const toughSub = sem.ov.tough;
-          const easySub = sem.ov.easiest;
-
-          const insights = [];
-          // 1. Overall Performance Insight
-          const pp = parseFloat(sem.ov.pp);
-          insights.push({
-            type: pp > 75 ? 'positive' : pp > 60 ? 'info' : 'warning',
-            title: 'Overall Performance',
-            detail: `The batch achieved an overall pass rate of ${pp}%. ${pp > 75 ? 'Excellent result across most departments.' : 'There is significant room for improvement in core subjects.'}`
-          });
-
-          // 2. Departmental Insight
-          if (topDept && bottomDept) {
-            insights.push({
-              type: 'info',
-              title: 'Departmental Variance',
-              detail: `${topDept.code} is leading with ${topDept.pp}% pass rate, while ${bottomDept.code} is trailing at ${bottomDept.pp}%.`
-            });
-          }
-
-          // 3. Subject Criticality
-          if (toughSub && parseFloat(toughSub.pp) < 65) {
-            insights.push({
-              type: 'critical',
-              title: 'Subject Alert',
-              detail: `${toughSub.name} (${toughSub.code}) has the lowest pass rate at ${toughSub.pp}%, impacting the overall SGPA significantly.`
-            });
-          }
-
-          // 4. Specific Departmental Warning
-          const highFailDept = sem.departments.find(d => parseFloat(d.pp) < 55);
-          if (highFailDept) {
-            insights.push({
-              type: 'warning',
-              title: 'Department Red Flag',
-              detail: `${highFailDept.code} department needs urgent intervention, with ${highFailDept.fail} students needing to clear backlogs.`
-            });
-          }
-
-          const recs = [
-            `Conduct special remedial classes for ${toughSub?.name || 'difficult subjects'} focusing on previous year question patterns.`,
-            `Arrange peer-learning sessions where students from ${topDept?.code || 'topper departments'} can mentor those in need.`,
-            `Analyze internal assessment marks for ${toughSub?.code || 'low performing subjects'} to identify early warning signs.`,
-            `Host a student counseling session for the ${bottomDept?.code || 'low performing'} department to address academic stress.`
-          ];
-
-          const data = {
-            summary: `The semester analysis reveals a ${pp}% pass percentage. ${toughSub?.name} has emerged as the most challenging course, while ${topDept?.code} demonstrates the highest academic stability.`,
-            insights: insights.slice(0, 4),
-            recommendations: recs.slice(0, 4)
-          };
-
-          setAiState({ loading: false, data, err: null });
-        } catch (e) { setAiState({ loading: false, data: null, err: 'Analysis engine failed to process data.' }); }
+          const pp = parseFloat(sem.ov.pp), td = sem.ov.best, bd2 = sem.ov.worst, ts = sem.ov.tough;
+          const insights = [
+            { type: pp > 75 ? 'positive' : pp > 60 ? 'info' : 'warning', title: 'Overall Performance', detail: `Overall pass rate is ${pp}%. ${pp > 75 ? 'Excellent across departments.' : 'Significant room for improvement.'}` },
+            td && bd2 && { type: 'info', title: 'Departmental Variance', detail: `${td.code} leads at ${td.pp}% pass, while ${bd2.code} trails at ${bd2.pp}%.` },
+            ts && parseFloat(ts.pp) < 65 && { type: 'critical', title: 'Subject Alert', detail: `${ts.name} (${ts.code}) has only ${ts.pp}% pass rate.` },
+          ].filter(Boolean);
+          setAiState({ loading: false, data: { summary: `${pp}% pass rate. ${ts?.name || 'Key subjects'} are most challenging. ${td?.code || 'Top departments'} lead academically.`, insights, recommendations: [`Remedial classes for ${ts?.name || 'low-pass subjects'}.`, `Peer mentoring from ${td?.code} to struggling departments.`, `Early identification of at-risk students via internal marks.`] }, err: null });
+        } catch (e) { setAiState({ loading: false, data: null, err: 'Analysis failed.' }); }
       };
 
-      /* Theme */
-      const bg = theme === 'dark' ? '#050810' : theme === 'medium' ? '#0d1117' : '#f8f9fc';
-      const surf = theme === 'dark' ? 'rgba(10,15,30,0.45)' : theme === 'medium' ? '#161c2d' : 'rgba(255,255,255,0.8)';
       const bd = theme === 'dark' ? 'rgba(167,139,250,0.1)' : theme === 'medium' ? '#30363d' : 'rgba(99,102,241,0.1)';
       const txt = theme === 'dark' ? '#f8fafc' : theme === 'medium' ? '#c9d1d9' : '#0f172a';
       const mu = theme === 'dark' ? '#64748b' : theme === 'medium' ? '#6e7681' : '#94a3b8';
+      const DC = ['#7c6ef5','#10d9a8','#f59e0b','#ef4444','#3b82f6','#ec4899'];
 
       const TABS = [
         { id: 'upload', icon: 'fa-cloud-arrow-up', label: 'Upload' },
@@ -317,13 +194,12 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div style=${{ padding: '20px 16px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src="assets/favicon-48x48.png" style=${{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,var(--accent),var(--accent))', objectFit: 'contain', padding: '4px', boxShadow: '0 4px 12px rgba(124,110,245,.4)' }} alt="Logo" />
+        <img src="assets/favicon-48x48.png" style=${{ width: 32, height: 32, borderRadius: 8, objectFit: 'contain', padding: '4px', boxShadow: '0 4px 12px rgba(124,110,245,.4)' }} alt="Logo" />
         <div>
           <div style=${{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, letterSpacing: '.04em', color: 'var(--accent)', lineHeight: 1 }}>APJ AKTU RESULT</div>
           <div style=${{ fontSize: 9, letterSpacing: '.12em', color: mu, lineHeight: 1 }}>ANALYTICAL ENGINE</div>
         </div>
       </div>
-      
       <nav style=${{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
         <div class="nav-item" onClick=${() => window.location.href = 'index.html'} style=${{ marginBottom: 12, borderBottom: `1px solid ${bd}`, borderRadius: 0, paddingBottom: 12 }}>
           <i class="fa-solid fa-house" style=${{ fontSize: 16, width: 24 }}></i><span>Dashboard Home</span>
@@ -333,7 +209,6 @@
             <i class=${'fa-solid ' + t.icon} style=${{ fontSize: 16, width: 24 }}></i>${t.label}
           </div>`)}
       </nav>
-
       <div class="sidebar-footer">
         <div class="dev-credit">Developed by <strong style=${{ color: 'var(--accent)' }}>Arun Xavier</strong><br/>Asst. Prof., Dept. of EEE<br/>Vidya Academy of Science & Technology,<br/>Thrissur</div>
       </div>
@@ -343,16 +218,20 @@
       <!-- TOPBAR -->
       <header class="topbar">
         <div style=${{ flex: 1, fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, color: txt, letterSpacing: '.02em' }}>
-          SEMESTER RESULT <span style=${{ color: 'var(--accent)' }}> PDF ANALYZER</span>
+          SEMESTER RESULT <span style=${{ color: 'var(--accent)' }}>PDF ANALYZER</span>
         </div>
-        
         <div style=${{ display: 'flex', alignItems: 'center', gap: 8 }}>
           ${analysis && rawSems?.length > 1 && html`
             <select value=${selSem} onChange=${e => { setSelSem(+e.target.value); setAiState({ loading: false, data: null, err: null }); }} style=${{ fontSize: 12, padding: '5px 10px' }}>
-              ${rawSems.map((s, i) => html`<option key=${i} value=${i}>${s.label}</option>`)}
-            </select>`}
+              ${rawSems.map((s, i) => html`<option key=${i} value=${i}>${s.label}</option>`)}</select>`}
           ${analysis && html`
             <button onClick=${exportExcel} class="btn" style=${{ padding: '6px 12px', background: 'rgba(16,217,168,.1)', color: 'var(--green)', border: '1px solid rgba(16,217,168,.25)', fontSize: 12 }}>📥 Export Excel</button>`}
+          ${authLoading ? null : user ? html`
+            <div style=${{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <img src=${user.photoURL} style=${{ width: 30, height: 30, borderRadius: '50%', border: '2px solid var(--accent)' }} />
+              <button class="btn" onClick=${logout} style=${{ padding: '4px 10px', fontSize: 11, color: mu, background: 'transparent', border: `1px solid ${bd}` }}>Sign Out</button>
+            </div>` : html`
+            <button class="btn" onClick=${login} style=${{ padding: '5px 14px', background: 'var(--accent)', color: 'white', border: 'none', fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}><i class="fa-brands fa-google"></i> Login</button>`}
           <div class="theme-switcher" onClick=${toggleTheme} title="Change Theme">
             <div class="ts-slider" style=${{ transform: theme === 'dark' ? 'translateX(0)' : theme === 'medium' ? 'translateX(32px)' : 'translateX(64px)' }}></div>
             <div class="ts-icon" title="Obsidian Neon">🌙</div>
@@ -363,7 +242,6 @@
       </header>
 
       <main class="content">
-        <!-- Content Area -->
 
       <!-- UPLOAD TAB -->
       ${tab === 'upload' && html`<div class="fadeUp" style=${{ maxWidth: 680, margin: '32px auto' }}>
@@ -376,22 +254,35 @@
           </p>
         </div>
 
+        ${!user && !authLoading && html`
+          <div style=${{ padding: '24px', borderRadius: 12, background: 'rgba(124,110,245,.08)', border: '1px solid rgba(124,110,245,.3)', textAlign: 'center', marginBottom: 24 }}>
+            <div style=${{ fontSize: 32, marginBottom: 10 }}>🔒</div>
+            <div style=${{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: 'var(--accent)' }}>Authentication Required</div>
+            <p style=${{ color: mu, fontSize: 13, marginBottom: 16 }}>Sign in with your Google account to start analyzing KTU result PDFs securely.</p>
+            <button onClick=${login} style=${{ background: 'var(--accent)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <i class="fa-brands fa-google"></i> Sign in with Google
+            </button>
+          </div>`}
+
         <div onDragOver=${e => { e.preventDefault(); setDragOver(true); }} onDragLeave=${() => setDragOver(false)} onDrop=${onDrop}
-          onClick=${() => !loading && fileRef.current?.click()}
+          onClick=${() => !loading && user && fileRef.current?.click()}
           style=${{
-            border: `2px dashed ${dragOver ? 'var(--accent)' : bd}`, borderRadius: 16, padding: '52px 24px', cursor: loading ? 'default' : 'pointer',
+            border: `2px dashed ${dragOver ? 'var(--accent)' : bd}`, borderRadius: 16, padding: '52px 24px',
+            cursor: (loading || !user) ? 'default' : 'pointer',
             background: dragOver ? 'rgba(167,139,250,.06)' : dark ? 'rgba(255,255,255,.02)' : 'rgba(0,0,0,.02)',
-            transition: 'all .2s', textAlign: 'center', marginBottom: 16
+            transition: 'all .2s', textAlign: 'center', marginBottom: 16, opacity: !user ? 0.5 : 1
           }}>
           <div style=${{ fontSize: 48, marginBottom: 16, lineHeight: 1 }}>${loading ? '⏳' : '📋'}</div>
-          <div style=${{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: dragOver ? 'var(--accent)' : txt }}>${loading ? 'Parsing PDF…' : 'Drop KTU Result PDF here'}</div>
-          <div style=${{ color: mu, fontSize: 13 }}>${loading ? html`<span class="pulse">Extracting student records…</span>` : 'or click to browse — PDF files only'}</div>
+          <div style=${{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: dragOver ? 'var(--accent)' : txt }}>
+            ${loading ? loadingMsg : (user ? 'Drop KTU Result PDF here' : 'Login to upload PDFs')}
+          </div>
+          <div style=${{ color: mu, fontSize: 13 }}>
+            ${loading ? html`<span class="pulse">Please wait, this may take 20–40 seconds…</span>` : (user ? 'or click to browse — PDF files only' : '')}
+          </div>
           <input ref=${fileRef} type="file" accept=".pdf" style=${{ display: 'none' }} onChange=${e => handleFile(e.target.files[0])}/>
         </div>
 
         ${uploadErr && html`<div style=${{ padding: '12px 16px', borderRadius: 8, background: 'rgba(244,63,94,.1)', border: '1px solid rgba(244,63,94,.25)', color: 'var(--red)', fontSize: 13, marginBottom: 16 }}>⚠ ${uploadErr}</div>`}
-
-
 
         <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 32 }}>
           ${[{ icon: '◈', t: 'Smart Dashboard', d: 'Bar, pie, line & radar charts' }, { icon: '⬡', t: 'Dept Rankings', d: 'Pass %, SGPA, difficulty analysis' }, { icon: '✦', t: 'AI Insights', d: 'Claude-powered trend analysis' }].map((f, i) => html`
@@ -416,7 +307,7 @@
           <div class="card" style=${{ padding: '20px' }}>
             <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 16 }}>DEPARTMENT-WISE PASS %</div>
             <${RC.ResponsiveContainer} width="100%" height=${260}>
-              <${RC.BarChart} data=${sem.departments.map((d, i) => ({ name: d.code, Pass: +d.pp, Fail: +(100 - d.pp).toFixed(1) }))}>
+              <${RC.BarChart} data=${sem.departments.map(d => ({ name: d.code, Pass: +d.pp, Fail: +(100 - d.pp).toFixed(1) }))}>
                 <${RC.CartesianGrid} strokeDasharray="3 3" stroke=${dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'}/>
                 <${RC.XAxis} dataKey="name" tick=${{ fill: mu, fontSize: 12 }}/>
                 <${RC.YAxis} domain=${[0, 100]} tick=${{ fill: mu, fontSize: 12 }}/>
@@ -459,10 +350,10 @@
           </div>
           <div style=${{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             ${[{ icon: '🥇', title: 'Best Department', name: sem.ov.best?.name, stat: `${sem.ov.best?.pp}% pass · SGPA ${sem.ov.best?.avgSGPA}`, color: 'var(--gold)' },
-          { icon: '📉', title: 'Needs Attention', name: sem.ov.worst?.name, stat: `${sem.ov.worst?.pp}% pass · SGPA ${sem.ov.worst?.avgSGPA}`, color: 'var(--red)' },
-          { icon: '🔥', title: 'Toughest Subject', name: sem.ov.tough?.name, stat: `Only ${sem.ov.tough?.pp}% pass rate`, color: 'var(--accent)' },
-          { icon: '⭐', title: 'Easiest Subject', name: sem.ov.easiest?.name, stat: `${sem.ov.easiest?.pp}% pass rate`, color: 'var(--green)' },
-          ].map((h, i) => html`
+              { icon: '📉', title: 'Needs Attention', name: sem.ov.worst?.name, stat: `${sem.ov.worst?.pp}% pass · SGPA ${sem.ov.worst?.avgSGPA}`, color: 'var(--red)' },
+              { icon: '🔥', title: 'Toughest Subject', name: sem.ov.tough?.name, stat: `Only ${sem.ov.tough?.pp}% pass rate`, color: 'var(--accent)' },
+              { icon: '⭐', title: 'Easiest Subject', name: sem.ov.easiest?.name, stat: `${sem.ov.easiest?.pp}% pass rate`, color: 'var(--green)' },
+            ].map((h, i) => html`
               <div key=${i} class="card" style=${{ padding: '14px 16px', borderLeft: `3px solid ${h.color}`, display: 'flex', gap: 12, alignItems: 'center' }}>
                 <span style=${{ fontSize: 22 }}>${h.icon}</span>
                 <div style=${{ flex: 1, minWidth: 0 }}>
@@ -473,21 +364,6 @@
               </div>`)}
           </div>
         </div>
-
-        ${analysis?.length > 1 && html`
-          <div class="card" style=${{ padding: '20px' }}>
-            <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 16 }}>SEMESTER COMPARISON — PASS % TREND</div>
-            <${RC.ResponsiveContainer} width="100%" height=${240}>
-              <${RC.LineChart} data=${analysis.map(a => ({ sem: a.label, ...Object.fromEntries(a.departments.map(d => [d.code, +d.pp])) }))}>
-                <${RC.CartesianGrid} strokeDasharray="3 3" stroke=${dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'}/>
-                <${RC.XAxis} dataKey="sem" tick=${{ fill: mu, fontSize: 12 }}/>
-                <${RC.YAxis} domain=${[40, 100]} tick=${{ fill: mu, fontSize: 12 }}/>
-                <${RC.Tooltip} content=${html`<${CTip}/>`}/>
-                <${RC.Legend} wrapperStyle=${{ fontSize: 12, color: mu }}/>
-                ${sem.departments.map((d, i) => html`<${RC.Line} key=${d.code} type="monotone" dataKey=${d.code} stroke=${DC[i % DC.length]} strokeWidth=${2} dot=${{ r: 4, fill: DC[i % DC.length] }} activeDot=${{ r: 5 }}/>`)}
-              </${RC.LineChart}>
-            </${RC.ResponsiveContainer}>
-          </div>`}
       </div>`}
 
       <!-- DEPARTMENTS TAB -->
@@ -528,7 +404,7 @@
             <tbody>
               ${sem.departments.map((d, i) => html`
                 <tr key=${d.code}>
-                  <td><span style=${{ fontWeight: 600, color: i === 0 ? 'var(--gold)' : i === 1 ? '#8b949e' : mu }}>#${i + 1}</span></td>
+                  <td><span style=${{ fontWeight: 600, color: i === 0 ? 'var(--gold)' : mu }}>#${i + 1}</span></td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", fontWeight: 600, color: DC[i % DC.length] }}>${d.code}</span></td>
                   <td style=${{ color: mu, fontSize: 12 }}>${d.name}</td>
                   <td style=${{ fontFamily: "var(--font-mono)" }}>${d.tot}</td>
@@ -563,8 +439,8 @@
                 <thead><tr><th>Code</th><th>Subject Name</th><th>Total</th><th>Passed</th><th>Failed</th><th>Pass %</th><th>Difficulty</th></tr></thead>
                 <tbody>
                   ${[...dept.subjects].sort((a, b) => parseFloat(a.pp) - parseFloat(b.pp)).map(sub => {
-            const p = parseFloat(sub.pp), [cls, lbl] = p < 60 ? ['diffH', 'Hard'] : p < 78 ? ['diffM', 'Medium'] : ['diffE', 'Easy'], barColor = p < 60 ? 'var(--red)' : p < 78 ? 'var(--gold)' : 'var(--green)';
-            return html`<tr key=${sub.code}>
+                    const p = parseFloat(sub.pp), [cls, lbl] = p < 60 ? ['diffH', 'Hard'] : p < 78 ? ['diffM', 'Medium'] : ['diffE', 'Easy'], barColor = p < 60 ? 'var(--red)' : p < 78 ? 'var(--gold)' : 'var(--green)';
+                    return html`<tr key=${sub.code}>
                       <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--accent)', fontSize: 12 }}>${sub.code}</span></td>
                       <td style=${{ maxWidth: 220, fontSize: 13 }}>${sub.name}</td>
                       <td style=${{ fontFamily: "var(--font-mono)" }}>${sub.total}</td>
@@ -576,7 +452,7 @@
                       </div></td>
                       <td><span class=${'btn ' + cls} style=${{ padding: '2px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20 }}>${lbl}</span></td>
                     </tr>`;
-          })}
+                  })}
                 </tbody>
               </table>
             </div>`)}
@@ -598,8 +474,8 @@
             <thead><tr><th>#</th><th>Reg. No.</th><th>Dept</th><th>SGPA</th><th>Status</th><th>Passed</th><th>Failed</th></tr></thead>
             <tbody>
               ${filteredStudents.slice(0, 200).map((stu, i) => {
-            const passCount = stu.subjects.filter(s => s.passed).length, failCount = stu.subjects.length - passCount, di = sem.departments.findIndex(d => d.code === stu.department);
-            return html`<tr key=${i}>
+                const passCount = stu.subjects.filter(s => s.passed).length, failCount = stu.subjects.length - passCount, di = sem.departments.findIndex(d => d.code === stu.department);
+                return html`<tr key=${i}>
                   <td style=${{ color: mu, fontSize: 11 }}>${i + 1}</td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", fontSize: 12, color: mu }}>${stu.regNo}</span></td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: DC[di >= 0 ? di % DC.length : 0] }}>${stu.department}</span></td>
@@ -608,7 +484,7 @@
                   <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--green)' }}>${passCount}</span></td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", color: failCount > 0 ? 'var(--red)' : mu }}>${failCount}</span></td>
                 </tr>`;
-          })}
+              })}
             </tbody>
           </table>
         </div>
@@ -617,29 +493,23 @@
       <!-- AI INSIGHTS TAB -->
       ${tab === 'ai' && sem && html`<div class="fadeUp" style=${{ maxWidth: 920, margin: '0 auto' }}>
         <div style=${{ textAlign: 'center', marginBottom: 32 }}>
-          <div style=${{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, letterSpacing: '.03em', background: 'linear-gradient(135deg,var(--accent),var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>
-            AI PERFORMANCE INSIGHTS
-          </div>
-          <p style=${{ color: mu, fontSize: 14 }}>Powered by Claude — analyzes ${sem.ov.totS} students across ${sem.departments.length} departments</p>
+          <div style=${{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, letterSpacing: '.03em', background: 'linear-gradient(135deg,var(--accent),var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>AI PERFORMANCE INSIGHTS</div>
+          <p style=${{ color: mu, fontSize: 14 }}>Powered by AI — analyzes ${sem.ov.totS} students across ${sem.departments.length} departments</p>
         </div>
 
         ${!aiState.data && !aiState.loading && html`
           <div class="card" style=${{ padding: '48px 24px', textAlign: 'center', marginBottom: 20 }}>
             <div style=${{ fontSize: 48, marginBottom: 16, color: 'var(--accent)' }}>✦</div>
             <div style=${{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>Ready to Analyze</div>
-            <p style=${{ color: mu, fontSize: 13, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 28px' }}>
-              Claude AI will analyze performance, identify difficulty patterns, and generate actionable recommendations.
-            </p>
-            <button onClick=${genAI} class="btn" style=${{ padding: '14px 36px', fontSize: 15, fontWeight: 600, background: 'linear-gradient(135deg,var(--accent),var(--accent))', color: 'white', border: 'none' }}>
-              ✦ Generate AI Insights
-            </button>
+            <p style=${{ color: mu, fontSize: 13, lineHeight: 1.7, maxWidth: 440, margin: '0 auto 28px' }}>AI will analyze performance, identify difficulty patterns, and generate actionable recommendations.</p>
+            <button onClick=${genAI} class="btn" style=${{ padding: '14px 36px', fontSize: 15, fontWeight: 600, background: 'var(--accent)', color: 'white', border: 'none' }}>✦ Generate AI Insights</button>
           </div>`}
 
         ${aiState.loading && html`
           <div class="card" style=${{ padding: '56px', textAlign: 'center' }}>
             <div style=${{ fontSize: 40, marginBottom: 16, color: 'var(--accent)' }} class="pulse">✦</div>
             <div style=${{ fontFamily: "var(--font-head)", fontSize: 20, letterSpacing: '.06em', color: 'var(--accent)', marginBottom: 8 }}>ANALYZING DATA…</div>
-            <div style=${{ color: mu, fontSize: 13 }}>Claude is processing result patterns</div>
+            <div style=${{ color: mu, fontSize: 13 }}>Processing result patterns</div>
           </div>`}
 
         ${aiState.data && html`<div>
@@ -650,10 +520,10 @@
             </div>`}
           <div style=${{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
             ${aiState.data.insights?.map((ins, i) => {
-            const colMap = { positive: 'var(--green)', warning: 'var(--gold)', critical: 'var(--red)', info: 'var(--accent)' };
-            const icoMap = { positive: '✓', warning: '⚠', critical: '✗', info: '◈' };
-            const c = colMap[ins.type] || 'var(--accent)';
-            return html`<div key=${i} class="card" style=${{ padding: '18px 20px', borderLeft: `3px solid ${c}` }}>
+              const colMap = { positive: 'var(--green)', warning: 'var(--gold)', critical: 'var(--red)', info: 'var(--accent)' };
+              const icoMap = { positive: '✓', warning: '⚠', critical: '✗', info: '◈' };
+              const c = colMap[ins.type] || 'var(--accent)';
+              return html`<div key=${i} class="card" style=${{ padding: '18px 20px', borderLeft: `3px solid ${c}` }}>
                 <div style=${{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <span style=${{ fontSize: 14, color: c, flexShrink: 0, marginTop: 1 }}>${icoMap[ins.type] || '◈'}</span>
                   <div>
@@ -662,13 +532,13 @@
                   </div>
                 </div>
               </div>`;
-          })}
+            })}
           </div>
           ${aiState.data.recommendations?.length > 0 && html`
             <div class="card" style=${{ padding: '20px 24px', marginBottom: 16 }}>
               <div style=${{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 700, letterSpacing: '.03em', marginBottom: 14 }}>RECOMMENDATIONS</div>
               ${aiState.data.recommendations.map((rec, i) => html`
-                <div key=${i} style=${{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < aiState.data.recommendations.length - 1 ? `1px solid ${dark ? 'rgba(48,54,61,.5)' : 'rgba(0,0,0,.08)'}` : '' }} >
+                <div key=${i} style=${{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < aiState.data.recommendations.length - 1 ? `1px solid ${dark ? 'rgba(48,54,61,.5)' : 'rgba(0,0,0,.08)'}` : '' }}>
                   <div style=${{ width: 24, height: 24, borderRadius: 6, background: 'rgba(167,139,250,.12)', border: '1px solid rgba(167,139,250,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--accent)', flexShrink: 0 }}>${i + 1}</div>
                   <div style=${{ fontSize: 13, lineHeight: 1.65, color: txt }}>${rec}</div>
                 </div>`)}

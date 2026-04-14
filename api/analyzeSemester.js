@@ -1,5 +1,6 @@
 const pdf = require('pdf-parse');
 const XLSX = require('xlsx-js-style');
+const nodeFetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 /* ── CONSTANTS ──────────────────────────────────────────────────── */
 const GP = { S: 10, 'A+': 9, A: 8.5, 'B+': 8, B: 7, 'C+': 6, C: 5, D: 4, F: 0, FE: 0, I: 0, Ab: 0, Absent: 0, Withheld: 0 };
@@ -403,15 +404,16 @@ async function exportExcelBase64(sem) {
 }
 
 /* ── API HANDLER ────────────────────────────────────────────────── */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { fileUrl } = req.body;
     if (!fileUrl) return res.status(400).json({ error: 'Missing fileUrl in request' });
 
-    // Download PDF from the URL (Firebase Storage Download URL provided by client)
-    const pdfResponse = await fetch(fileUrl);
+    // Download PDF from Firebase Storage URL
+    const fetchFn = typeof fetch !== 'undefined' ? fetch : nodeFetch;
+    const pdfResponse = await fetchFn(fileUrl);
     if (!pdfResponse.ok) throw new Error('Failed to download PDF from provided URL');
     
     const arrayBuffer = await pdfResponse.arrayBuffer();

@@ -1,4 +1,5 @@
 const XLSX = require('xlsx-js-style');
+const nodeFetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 const BRANCH_MAP = {
   'CS': 'Computer Science and Engineering',
@@ -226,20 +227,19 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
 }
 
 /* ── API HANDLER ────────────────────────────────────────────────── */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { files } = req.body; 
-    // files = [{ label: "Semester 1", url: "https://..." }, ...]
     if (!files || !Array.isArray(files) || files.length === 0) return res.status(400).json({ error: 'Missing or empty files array in request' });
 
     const semDataArr = [];
+    const fetchFn = typeof fetch !== 'undefined' ? fetch : nodeFetch;
 
-    // Download and parse all files
     for (let f of files) {
       if (!f.url) continue;
-      const fileRes = await fetch(f.url);
+      const fileRes = await fetchFn(f.url);
       if (!fileRes.ok) throw new Error(`Failed to download ${f.label}`);
       
       const arrayBuffer = await fileRes.arrayBuffer();

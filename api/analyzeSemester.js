@@ -108,6 +108,7 @@ function parseTxt(txt) {
     const line = lines[li];
     const raw = line.trim();
     if (!raw) continue;
+    const words = raw.split(/\s+/);
 
     // 1. Precise Match: "CODE Name" or "CODE : Name" on one line
     const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]\s*([A-Z][A-Z\d\s,.:/()&~-]{5,150})/i);
@@ -146,7 +147,6 @@ function parseTxt(txt) {
     }
 
     if (!cur) continue;
-    const words = raw.split(/\s+/);
 
     const dpLabel = raw.match(/(?:Branch|Programme(?:me)?|Department|Course(?!\s*Code)|Stream)\s*[:\s.-]+(.{3,60}?)(?:\s{2,}|$)/i);
     if (dpLabel) { cur.department = normDept(dpLabel[1]); }

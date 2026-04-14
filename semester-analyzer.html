@@ -220,8 +220,15 @@
             <i class=${'fa-solid ' + t.icon} style=${{ fontSize: 16, width: 24 }}></i>${t.label}
           </div>`)}
       </nav>
-      <div class="sidebar-footer">
-        <div class="dev-credit">Developed by <strong style=${{ color: 'var(--accent)' }}>Arun Xavier</strong><br/>Asst. Prof., Dept. of EEE<br/>Vidya Academy of Science & Technology,<br/>Thrissur</div>
+      <div class="sidebar-footer" style=${{ padding: '16px', borderTop: `1px solid ${bd}` }}>
+        <div class="dev-credit" style=${{ fontSize: '10px', lineHeight: '1.4', color: mu }}>
+          Developed by <strong style=${{ color: 'var(--accent)' }}>Arun Xavier</strong><br/>
+          Asst. Prof., Dept. of EEE<br/>
+          Vidya Academy of Science & Technology, Thrissur
+        </div>
+        <div style=${{ marginTop: '12px', fontSize: '9px', fontStyle: 'italic', color: 'var(--red)', opacity: 0.8 }}>
+          Note: SGPA might be slightly different from the official KTU result, since subjects in specific schemes have different credits.
+        </div>
       </div>
     </aside>
 
@@ -307,6 +314,10 @@
 
       <!-- OVERVIEW TAB -->
       ${tab === 'overview' && sem && html`<div class="fadeUp">
+        <div style=${{ marginBottom: '20px', padding: '0 4px' }}>
+          <div style=${{ fontSize: '12px', color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.1em', marginBottom: '4px' }}>${sem.meta?.semester?.toUpperCase() || 'SEMESTER ANALYSIS'}</div>
+          <div style=${{ fontSize: '24px', fontWeight: 800, color: txt }}>${(sem.meta?.college || 'Unknown College').toUpperCase()}</div>
+        </div>
         <div style=${{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
           <${StatCard} icon="◷" label="Total Students"  value=${sem.ov.totS}      color="var(--accent)" dark=${dark}/>
           <${StatCard} icon="✓" label="Overall Pass %"  value=${`${sem.ov.pp}%`}  color="var(--green)" dark=${dark}/>

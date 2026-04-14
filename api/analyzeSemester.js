@@ -108,8 +108,9 @@ function parseTxt(txt) {
     const raw = line.trim();
     if (!raw) continue;
 
-    const subDefMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()-]{5,150})/i);
-    if (subDefMatch && !raw.includes('(') && !REG_RE.test(raw)) {
+    // Improved Subject Definition Regex: handles "CODE Name", "CODE: Name", "CODE - Name"
+    const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]\s*([A-Z][A-Z\d\s,.:/()&~-]{5,150})/i);
+    if (subDefMatch && !REG_RE.test(raw)) {
       const code = subDefMatch[1].toUpperCase();
       const name = subDefMatch[2].trim();
       if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
@@ -198,8 +199,7 @@ function parseTxt(txt) {
         if (gi < tokens.length) {
           const grade = cleanGrade(tokens[gi]);
           if (GRADE_RE.test(grade) && !fc.subjects.find(s => s.code === t)) {
-            const name = subNameMap[t] || 'Subject';
-            fc.subjects.push({ code: t, name, grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
+            fc.subjects.push({ code: t, name: subNameMap[t] || 'Subject', grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
             ti = gi;
           }
         }
@@ -207,6 +207,15 @@ function parseTxt(txt) {
     }
     if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
   }
+
+  // Final Pass: Ensure all subject names are populated from the collected subNameMap
+  students.forEach(s => {
+    s.subjects.forEach(sub => {
+      if (sub.name === 'Subject' && subNameMap[sub.code]) {
+        sub.name = subNameMap[sub.code];
+      }
+    });
+  });
 
   if (!students.length) return null;
   const dm = {};

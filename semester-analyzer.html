@@ -115,9 +115,16 @@
       const [authLoading, setAuthLoading] = useState(true);
       const fileRef = useRef();
 
-      useEffect(() => { return firebase.auth().onAuthStateChanged(u => { setUser(u); setAuthLoading(false); }); }, []);
+      useEffect(() => {
+        return firebase.auth().onAuthStateChanged(u => {
+          setUser(u);
+          setAuthLoading(false);
+          // Redirec to Landing if not authenticated
+          if (!u) window.location.href = 'index.html';
+        });
+      }, []);
       const login = () => firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      const logout = () => { firebase.auth().signOut(); setAnalysis(null); setTab('upload'); };
+      const logout = () => firebase.auth().signOut().then(() => window.location.href = 'index.html');
 
       const handleFile = useCallback(async (file) => {
         if (!user) { setUploadErr('You must login via Google to upload files.'); return; }

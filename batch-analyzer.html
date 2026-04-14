@@ -92,6 +92,11 @@
         <div class="topbar-actions">
           <button class="btn btn-ghost btn-sm" onclick="exportReport()" id="xlsxBtn" style="display:none">📥 Export
             Excel</button>
+          
+          <div id="userInfo" style="display:none; align-items:center; gap:10px; margin-right:10px; padding-right:10px; border-right:1px solid var(--border)">
+            <img id="userAvatar" src="" alt="User" style="width:32px; height:32px; border-radius:50%; border:2px solid var(--accent)">
+            <button class="btn btn-ghost btn-sm" onclick="logout()" style="font-size:12px; font-weight:600; color:var(--text2)">Sign Out</button>
+          </div>
           <div class="theme-switcher" onclick="toggleTheme()" title="Change Theme">
             <div class="ts-slider"></div>
             <div class="ts-icon" title="Obsidian Neon">🌙</div>
@@ -183,15 +188,19 @@
     let currentUser = null;
     firebase.auth().onAuthStateChanged(u => {
       currentUser = u;
-      document.getElementById('loginBtn').style.display = u ? 'none' : 'block';
+      if (!u) {
+        // If not logged in, go back to landing page
+        window.location.href = 'index.html';
+        return;
+      }
       const ui = document.getElementById('userInfo');
       if (ui) {
-        ui.style.display = u ? 'flex' : 'none';
-        if (u) document.getElementById('userAvatar').src = u.photoURL;
+        ui.style.display = 'flex';
+        document.getElementById('userAvatar').src = u.photoURL;
       }
     });
     function login() { firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-    function logout() { firebase.auth().signOut(); window.location.reload(); }
+    function logout() { firebase.auth().signOut().then(() => window.location.href = 'index.html'); }
   
     let slots = [], students = {}, semData = [], ready = false;
     const PASS_GRADES = new Set(['S', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'P', 'PASS']);

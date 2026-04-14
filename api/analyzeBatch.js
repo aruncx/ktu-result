@@ -585,6 +585,7 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
   const yr = allYrs.length ? Math.max(...allYrs) : 'Batch';
   const allBrs = allStu.map(s => s.branchCode).filter(Boolean);
   const br = allBrs.length ? allBrs[0] : '';
+  const filename = `APJ_AKTU_Results_${yr}_${br}_Analysis.xlsx`;
   return { filename, b64 };
 }
 

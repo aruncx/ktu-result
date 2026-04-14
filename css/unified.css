@@ -287,6 +287,79 @@
       line-height: 1.6
     }
 
+    /* ── MOBILE: Icon-only sidebar with tooltips ── */
+    @media (max-width: 768px) {
+
+      :root {
+        --sidebar-w: 56px;
+      }
+
+      .sidebar {
+        width: 56px;
+        min-width: 56px;
+      }
+
+      /* Hide logo text & footer credit on mobile */
+      .logo-text,
+      .sidebar-footer .dev-credit {
+        display: none;
+      }
+
+      /* Centre the logo icon */
+      .sidebar-logo {
+        justify-content: center;
+        padding: 16px 10px;
+      }
+
+      /* Centre nav items and remove extra padding */
+      .nav-item {
+        justify-content: center;
+        padding: 10px 0;
+        gap: 0;
+        position: relative;
+      }
+
+      /* Hide label text */
+      .nav-item > span:not(.nav-icon) {
+        display: none;
+      }
+
+      /* Tooltip bubble */
+      .nav-item::after {
+        content: attr(data-label);
+        position: absolute;
+        left: calc(100% + 10px);
+        top: 50%;
+        transform: translateY(-50%) scale(0.85);
+        background: var(--surface3, #1c2333);
+        color: var(--text);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        z-index: 999;
+      }
+
+      /* Show tooltip on hover/focus/touch */
+      .nav-item:hover::after,
+      .nav-item:focus::after,
+      .nav-item.tooltip-visible::after {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+      }
+
+      /* Also hide hover translate so icons stay centred */
+      .nav-item:hover {
+        transform: none;
+      }
+    }
+
     /* TOPBAR */
     .topbar-title {
       font-family: var(--font-head);
@@ -1883,7 +1956,6 @@
   object-fit: contain;
   padding: 4px;
   box-shadow: 0 4px 12px rgba(124, 110, 245, .4);
-}
 }
 .logo-title {
   font-family: var(--font-head); font-size: 17px; font-weight: 800; letter-spacing: .04em; color: var(--accent); line-height: 1;

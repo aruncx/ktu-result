@@ -13,9 +13,13 @@
     <meta name="google-site-verification" content="Hl1G1R66J_DsaQzUZAbvL7QP29hYVeh4N2TsKoBI6Vk" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AKTU Result Analytical Engine – Advanced Academic Performance Suite</title>
+    <title>KTU Result Analyser | Batch & Semester Performance Tool</title>
     <meta name="description"
-        content="Master APJ AKTU results with our Advanced Analytical Engine. Transform official PDFs and Excel data into deep academic insights, professional reports, and interactive performance dashboards.">
+        content="Analyse KTU (APJ Abdul Kalam Technological University) semester results. Upload Excel and PDF files to get batchwise insights, subject rankings, and performance trends.">
+    <meta property="og:title" content="KTU Result Analyser – Batch & Semester Analysis">
+    <meta property="og:description" content="Fast, accurate result analysis for KTU faculty and students.">
+    <meta property="og:url" content="https://ktuanalysis.vercel.app/">
+    <meta property="og:type" content="website">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48x48.png">
@@ -122,7 +126,140 @@
         .hi-r {
             color: var(--red);
         }
+
+        /* Feature Cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+            margin-bottom: 50px;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 20px;
+            background: rgba(124, 110, 245, 0.1);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+        }
+
+        .feature-title {
+            color: var(--text1);
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            line-height: 1.4;
+        }
+
+        .feature-desc {
+            color: var(--text3);
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0 0 15px 0;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+            flex-grow: 1;
+        }
+
+        .feature-list li {
+            color: var(--text2);
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.5;
+        }
+
+        .feature-list li::before {
+            content: '•';
+            color: var(--accent);
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .feature-highlight {
+            background: rgba(124, 110, 245, 0.08);
+            border-left: 3px solid var(--accent);
+            padding: 12px 15px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            color: var(--text1);
+            font-weight: 500;
+            margin-top: auto;
+            line-height: 1.5;
+        }
+
+        .why-matters {
+            background: linear-gradient(135deg, rgba(124, 110, 245, 0.05) 0%, rgba(124, 110, 245, 0.15) 100%);
+            border: 1px solid rgba(124, 110, 245, 0.3);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+        }
     </style>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "KTU Result Analyser",
+        "url": "https://ktuanalysis.vercel.app/",
+        "description": "Analyse KTU (APJ Abdul Kalam Technological University) semester results. Upload Excel and PDF files to get batchwise insights, subject rankings, and performance trends.",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "All",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "creator": {
+            "@type": "Person",
+            "name": "Arun Xavier"
+        }
+    }
+    </script>
 </head>
 
 <body>
@@ -138,6 +275,12 @@
             <nav class="sidebar-nav">
                 <div class="nav-item active" onclick="app.switchMode('HOME')" id="nav-home">
                     <span class="nav-icon">🏠</span><span>Dashboard Home</span>
+                </div>
+                <div class="nav-item" onclick="app.switchMode('FEATURES')" id="nav-features">
+                    <span class="nav-icon">✨</span><span>Features</span>
+                </div>
+                <div class="nav-item" onclick="app.switchMode('ABOUT')" id="nav-about">
+                    <span class="nav-icon">ℹ️</span><span>About Platform</span>
                 </div>
                 <div class="section-divider"
                     style="margin: 10px 12px; height: 1px; background: var(--border); opacity: 0.5;"></div>
@@ -166,24 +309,161 @@
 
             <main class="content" id="app-content">
                 <div id="view-home" class="hero-page fade-in">
-                    
-                    <div id="authContainer" style="margin-bottom: 30px; display: flex; justify-content: center; width: 100%;">
-                        <button class="nav-item" onclick="login()" id="loginBtn" style="background:#7c6ef5;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:16px;cursor:pointer;display:none;align-items:center;gap:10px;box-shadow:0 4px 15px rgba(124,110,245,0.4);">
-                            <i class="fa-brands fa-google"></i> Sign in with Google to Start
+
+                    <style>
+                        /* Modern 2026 UI Specific */
+                        .hero-title-glass {
+                            font-size: 64px;
+                            font-weight: 800;
+                            background: linear-gradient(135deg, #ffffff 0%, #a594fd 100%);
+                            -webkit-background-clip: text;
+                            background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            text-align: center;
+                            letter-spacing: -2px;
+                            margin-bottom: 20px;
+                            line-height: 1.1;
+                            text-shadow: 0 0 80px rgba(124, 110, 245, 0.3);
+                        }
+
+                        .hero-desc-glass {
+                            font-size: 18px;
+                            color: rgba(255, 255, 255, 0.6);
+                            text-align: center;
+                            max-width: 600px;
+                            margin: 0 auto 50px;
+                            line-height: 1.6;
+                            font-weight: 400;
+                        }
+
+                        .glass-btn {
+                            background: rgba(124, 110, 245, 0.1);
+                            backdrop-filter: blur(12px);
+                            -webkit-backdrop-filter: blur(12px);
+                            border: 1px solid rgba(124, 110, 245, 0.3);
+                            color: #a594fd;
+                            padding: 10px 24px;
+                            border-radius: 100px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 10px;
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+
+                        .glass-btn:hover {
+                            background: rgba(124, 110, 245, 0.2);
+                            border-color: rgba(124, 110, 245, 0.5);
+                            transform: translateY(-2px);
+                            box-shadow: 0 10px 25px -5px rgba(124, 110, 245, 0.3);
+                        }
+
+                        .premium-primary-btn {
+                            background: linear-gradient(135deg, #7c6ef5 0%, #5b4cf5 100%);
+                            color: white;
+                            border: none;
+                            padding: 14px 32px;
+                            border-radius: 12px;
+                            font-size: 15px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 10px;
+                            box-shadow: 0 8px 25px -5px rgba(124, 110, 245, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            position: relative;
+                            overflow: hidden;
+                        }
+
+                        .premium-primary-btn::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+                            transform: translateX(-100%);
+                            transition: transform 0.6s ease;
+                        }
+
+                        .premium-primary-btn:hover::before {
+                            transform: translateX(100%);
+                        }
+
+                        .premium-primary-btn:hover {
+                            transform: translateY(-2px);
+                            box-shadow: 0 12px 30px -5px rgba(124, 110, 245, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+                        }
+
+                        .glass-card {
+                            background: rgba(20, 15, 35, 0.6);
+                            backdrop-filter: blur(24px);
+                            -webkit-backdrop-filter: blur(24px);
+                            border: 1px solid rgba(124, 110, 245, 0.15);
+                            border-radius: 24px;
+                            padding: 60px 40px;
+                            margin-top: 20px;
+                            text-align: center;
+                            box-shadow: 0 30px 60px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                            position: relative;
+                            overflow: hidden;
+                            max-width: 600px;
+                            margin-left: auto;
+                            margin-right: auto;
+                        }
+
+                        .glass-card::before {
+                            content: '';
+                            position: absolute;
+                            top: -100px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            width: 300px;
+                            height: 300px;
+                            background: radial-gradient(circle, rgba(124, 110, 245, 0.15) 0%, transparent 70%);
+                            pointer-events: none;
+                        }
+                    </style>
+
+                    <div id="authContainer"
+                        style="margin-bottom: 50px; display: flex; justify-content: flex-end; width: 100%;">
+                        <button onclick="login()" id="loginBtn" class="glass-btn">
+                            <svg style="width: 16px; height: 16px; background: white; border-radius: 50%; padding: 2px;"
+                                viewBox="0 0 24 24">
+                                <path fill="#4285F4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="#34A853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="#FBBC05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="#EA4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            </svg>
+                            Sign In
                         </button>
-                        <div id="userInfo" style="display:none; align-items:center; gap:15px; background:var(--surface); padding:10px 20px; border-radius:30px; border:1px solid var(--border);">
-                            <img id="userAvatar" src="" style="width:36px; height:36px; border-radius:50%; border:2px solid var(--accent)">
+                        <div id="userInfo"
+                            style="display:none; align-items:center; gap:15px; background: rgba(30, 25, 50, 0.4); backdrop-filter: blur(12px); padding:8px 16px; border-radius:100px; border:1px solid rgba(124, 110, 245, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                            <img id="userAvatar" src=""
+                                style="width:32px; height:32px; border-radius:50%; border:2px solid var(--accent)">
                             <div style="text-align:left">
-                                <div style="font-size:12px; color:var(--text3)">Welcome back,</div>
-                                <div id="userName" style="font-size:14px; font-weight:700; color:var(--text)">User</div>
+                                <div id="userName" style="font-size:14px; font-weight:600; color:#fff">User</div>
                             </div>
-                            <div style="width:1px; height:24px; background:var(--border); margin:0 10px"></div>
-                            <button onclick="logout()" style="color:var(--text3);border:none;background:transparent;cursor:pointer;font-size:14px;font-weight:600">Sign Out</button>
+                            <div style="width:1px; height:20px; background:rgba(255,255,255,0.1); margin:0 5px"></div>
+                            <button onclick="logout()"
+                                style="color:var(--text3);border:none;background:transparent;cursor:pointer;font-size:13px;font-weight:500; transition: color 0.2s;"
+                                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text3)'">Sign
+                                Out</button>
                         </div>
                     </div>
 
-                    <h1 class="hero-title">Academic Result Intelligence</h1>
-                    <p class="hero-desc">The ultimate analysis suite for KTU faculty and students. Choose a module to
+                    <h1 class="hero-title hero-title-glass">Academic Result Intelligence</h1>
+                    <p class="hero-desc hero-desc-glass">The ultimate analysis suite for KTU faculty and students.
+                        Choose a module to
                         begin deep-diving into performance metrics.</p>
                     <div class="mode-grid" id="moduleGrid" style="display: none;">
                         <div class="mode-card" onclick="window.location.href='batch-analyzer.html'">
@@ -204,13 +484,278 @@
                         </div>
                     </div>
 
-                    <div id="loginPrompt" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg2); border: 1px dashed var(--border); border-radius: 12px; padding: 40px 20px; margin-top: 20px; text-align: center;">
-                        <div style="font-size: 40px; margin-bottom: 15px;">🔒</div>
-                        <h2 style="font-size: 20px; color: var(--text1); margin-bottom: 10px;">Authentication Required</h2>
-                        <p style="color: var(--text3); font-size: 14px; max-width: 400px; line-height: 1.6;">You must sign in using your Google account to access the Semester and Batch Analytical Modules. All processing is strictly secured.</p>
-                        <button class="nav-item" onclick="login()" style="margin-top: 25px; background:var(--accent);color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(124,110,245,0.3);">
-                            <i class="fa-brands fa-google"></i> Sign In to Unlock Features
+                    <div id="loginPrompt" class="glass-card"
+                        style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div
+                            style="font-size: 48px; margin-bottom: 20px; filter: drop-shadow(0 4px 10px rgba(124,110,245,0.3));">
+                            🔒</div>
+                        <h2
+                            style="font-size: 24px; color: #fff; margin-bottom: 12px; font-weight: 700; letter-spacing: -0.5px;">
+                            Authentication Required
+                        </h2>
+                        <p
+                            style="color: rgba(255,255,255,0.6); font-size: 15px; max-width: 420px; line-height: 1.6; margin-bottom: 35px;">
+                            You must sign in using your Google account to access the Semester and Batch Analytical
+                            Modules. All processing is strictly secured & private.</p>
+                        <button class="premium-primary-btn" onclick="login()">
+                            <svg style="width: 20px; height: 20px; background: white; border-radius: 50%; padding: 3px;"
+                                viewBox="0 0 24 24">
+                                <path fill="#4285F4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="#34A853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="#FBBC05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="#EA4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            </svg>
+                            Continue with Google
                         </button>
+                    </div>
+                </div>
+
+                <div id="view-about" class="hero-page fade-in"
+                    style="display: none; max-width: 800px; margin: 0 auto; padding: 0 20px 40px; text-align: left;">
+                    <h1 class="hero-title" style="margin-top: 0; text-align: center;">About KTU Result Analyser</h1>
+
+                    <div
+                        style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 25px; margin-bottom: 30px;">
+                        <h2
+                            style="font-size: 18px; color: var(--text1); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 24px;">📊</span> Batch Result Analyser
+                        </h2>
+                        <p style="color: var(--text2); line-height: 1.6; margin: 0;">
+                            Upload semester-wise Excel files from the <a href="https://app.ktu.edu.in/login.htm"
+                                target="_blank"
+                                style="color: var(--accent); text-decoration: none; font-weight: 500;">KTU Login
+                                Portal</a> for getting comprehensive batch insights and trends analysis.
+                        </p>
+                    </div>
+
+                    <div
+                        style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 25px; margin-bottom: 40px;">
+                        <h2
+                            style="font-size: 18px; color: var(--text1); margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 24px;">📄</span> Semester Result Analyser
+                        </h2>
+                        <p style="color: var(--text2); line-height: 1.6; margin: 0;">
+                            Parse official APJ Abdul Kalam University result PDF files for instant department rankings
+                            and subject difficulty scores.
+                        </p>
+                    </div>
+
+                    <div style="color: var(--text3); line-height: 1.8; font-size: 15px;">
+                        <p style="margin-bottom: 20px;">
+                            The <strong>KTU Result Analyzer</strong> is an advanced academic analytics platform designed
+                            to simplify and enhance the analysis of university examination results published by APJ
+                            Abdul Kalam Technological University (KTU). The system intelligently processes two types of
+                            data sources: KTU batch performance analysis reports and individual semester result updates,
+                            providing a complete and unified view of student performance. While the semester-wise Excel
+                            files reflect the latest results released by KTU for a specific semester, the batch-wise
+                            analysis files consolidate performance across multiple semesters, offering a holistic
+                            understanding of an entire class or batch over time.
+                        </p>
+                        <p style="margin-bottom: 20px;">
+                            By combining these two datasets, the platform delivers powerful insights such as
+                            semester-wise performance trends, cumulative CGPA analysis, student rankings, Eligible for
+                            Class Distinction identification, and detailed backlog categorization including one-subject
+                            failures, two-subject failures, and multiple arrears. All the data available in the Excel
+                            reports is seamlessly integrated into an interactive web interface, enabling students,
+                            tutors, and academic coordinators to access and analyze the same information in real time
+                            without the need to manually navigate spreadsheets. This makes it significantly easier to
+                            evaluate academic performance, identify weak areas, and monitor student progress
+                            efficiently.
+                        </p>
+                        <p style="margin-bottom: 20px;">
+                            The system is specifically designed to support faculty members and class tutors in gaining a
+                            clear understanding of the entire batch at a glance. With the latest KTU results
+                            continuously updated into the system, users can instantly assess the performance of each
+                            student, compare results across semesters, and make informed academic decisions. The APJ
+                            Abdul Kalam University result PDF parser eliminates the complexity of manual result analysis
+                            and transforms raw data into actionable insights, helping institutions improve academic
+                            outcomes and mentoring strategies.
+                        </p>
+                        <p>
+                            Optimized for accuracy, usability, and performance, the KTU Result Analyzer not only saves
+                            time but also enhances visibility into academic data through structured reports and dynamic
+                            visualization. Whether it is tracking individual student growth, identifying top performers,
+                            or analyzing overall class trends, the system provides a comprehensive solution for KTU
+                            result analysis, making it an essential tool for students and educators seeking smarter,
+                            faster, and more effective academic evaluation.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="view-features" class="hero-page fade-in"
+                    style="display: none; max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; text-align: left;">
+                    <div style="text-align: center; margin-bottom: 50px;">
+                        <h1 class="hero-title" style="margin-top: 0; font-size: 32px;"><span
+                                style="font-size: 36px; vertical-align: middle;">🚀</span> Features – KTU Result
+                            Analyser</h1>
+                        <p
+                            style="color: var(--text2); font-size: 16px; line-height: 1.6; max-width: 800px; margin: 0 auto;">
+                            The KTU Result Analyzer is a powerful academic analytics platform designed to simplify
+                            result processing and provide deep insights into student performance. Built for students,
+                            faculty, and academic coordinators, the system combines batch-wise analysis and
+                            semester-wise result processing into a single, intelligent platform.</p>
+                    </div>
+
+                    <div class="features-grid">
+                        <!-- 1. Dual Data Processing System -->
+                        <div class="feature-card">
+                            <div class="feature-icon">📊</div>
+                            <h3 class="feature-title">1. Dual Data Processing System</h3>
+                            <p class="feature-desc">The platform processes two types of result data from APJ Abdul Kalam
+                                Technological University (KTU):</p>
+                            <ul class="feature-list">
+                                <li>Semester-wise Results – Latest published results for each semester</li>
+                                <li>Batch-wise Analysis – Consolidated performance across multiple semesters</li>
+                            </ul>
+                            <div class="feature-highlight">👉 This ensures both real-time updates and long-term academic
+                                insights</div>
+                        </div>
+
+                        <!-- 2. Batch-wise Academic Analysis -->
+                        <div class="feature-card">
+                            <div class="feature-icon">📈</div>
+                            <h3 class="feature-title">2. Batch-wise Academic Analysis</h3>
+                            <p class="feature-desc">Complete overview of an entire class or batch</p>
+                            <ul class="feature-list">
+                                <li>CGPA trends</li>
+                                <li>Academic growth</li>
+                                <li>Overall performance distribution</li>
+                            </ul>
+                            <div class="feature-highlight">Helps faculty understand class performance at a glance</div>
+                        </div>
+
+                        <!-- 3. Semester-wise Result Breakdown -->
+                        <div class="feature-card">
+                            <div class="feature-icon">🧮</div>
+                            <h3 class="feature-title">3. Semester-wise Result Breakdown</h3>
+                            <p class="feature-desc">Detailed analysis for each semester</p>
+                            <ul class="feature-list">
+                                <li>Subject-wise results</li>
+                                <li>Pass/fail statistics</li>
+                                <li>Performance comparison</li>
+                            </ul>
+                            <div class="feature-highlight">👉 Ideal for tracking semester-to-semester progress</div>
+                        </div>
+
+                        <!-- 4. Student Ranking System -->
+                        <div class="feature-card">
+                            <div class="feature-icon">🏆</div>
+                            <h3 class="feature-title">4. Student Ranking System</h3>
+                            <p class="feature-desc">Automatically ranks students based on performance</p>
+                            <ul class="feature-list">
+                                <li>Identifies Top performers</li>
+                                <li>Identifies Average performers</li>
+                                <li>Identifies Students needing improvement</li>
+                            </ul>
+                            <div class="feature-highlight">👉 Helps in academic evaluation and recognition</div>
+                        </div>
+
+                        <!-- 5. ECD Identification -->
+                        <div class="feature-card">
+                            <div class="feature-icon">🎓</div>
+                            <h3 class="feature-title">5. ECD Identification (Eligible for Class Distinction)</h3>
+                            <p class="feature-desc">Detects students eligible for high academic distinction</p>
+                            <ul class="feature-list">
+                                <li>Based on CGPA and Backlog status</li>
+                            </ul>
+                            <div class="feature-highlight">Enables quick identification of high achievers</div>
+                        </div>
+
+                        <!-- 6. Advanced Backlog & Failure Analysis -->
+                        <div class="feature-card">
+                            <div class="feature-icon">⚠️</div>
+                            <h3 class="feature-title">6. Advanced Backlog & Failure Analysis</h3>
+                            <p class="feature-desc">Categorizes students based on failure status</p>
+                            <ul class="feature-list">
+                                <li>One subject failure, Two subject failures, Multiple backlogs</li>
+                                <li>Highlights Difficult subjects and At-risk students</li>
+                            </ul>
+                            <div class="feature-highlight">👉 Supports early academic intervention</div>
+                        </div>
+
+                        <!-- 7. Interactive Website Dashboard -->
+                        <div class="feature-card">
+                            <div class="feature-icon">📊</div>
+                            <h3 class="feature-title">7. Interactive Website Dashboard</h3>
+                            <p class="feature-desc">All Excel data is fully available on the website</p>
+                            <ul class="feature-list">
+                                <li>Presented in an interactive format</li>
+                                <li>Eliminates the need to manually browse Excel sheets</li>
+                            </ul>
+                            <div class="feature-highlight">👉 Everything in one place, instantly accessible</div>
+                        </div>
+
+                        <!-- 8. Real-Time Result Updates -->
+                        <div class="feature-card">
+                            <div class="feature-icon">🔄</div>
+                            <h3 class="feature-title">8. Real-Time Result Updates</h3>
+                            <p class="feature-desc">Uses latest KTU published results</p>
+                            <ul class="feature-list">
+                                <li>Ensures accurate analysis</li>
+                                <li>Maintains up-to-date student data</li>
+                            </ul>
+                        </div>
+
+                        <!-- 9. Faculty & Tutor Friendly Insights -->
+                        <div class="feature-card">
+                            <div class="feature-icon">👨‍🏫</div>
+                            <h3 class="feature-title">9. Faculty & Tutor Friendly Insights</h3>
+                            <p class="feature-desc">Helps tutors with actionable data</p>
+                            <ul class="feature-list">
+                                <li>Understand entire class performance</li>
+                                <li>Identify weak and strong students</li>
+                                <li>Make data-driven decisions</li>
+                            </ul>
+                            <div class="feature-highlight">👉 Saves time and improves mentoring efficiency</div>
+                        </div>
+
+                        <!-- 10. Structured Excel Report Generation -->
+                        <div class="feature-card">
+                            <div class="feature-icon">📁</div>
+                            <h3 class="feature-title">10. Structured Excel Report Generation</h3>
+                            <p class="feature-desc">Automatically generates professional Excel files with:</p>
+                            <ul class="feature-list">
+                                <li>Dashboard summary & Semester sheets</li>
+                                <li>Ranking & Failure analysis</li>
+                                <li>Clean and easy-to-navigate format</li>
+                            </ul>
+                        </div>
+
+                        <!-- 11. Performance Trend Analysis -->
+                        <div class="feature-card">
+                            <div class="feature-icon">📉</div>
+                            <h3 class="feature-title">11. Performance Trend Analysis</h3>
+                            <p class="feature-desc">Monitors long term academic trends</p>
+                            <ul class="feature-list">
+                                <li>Tracks Improvement across semesters</li>
+                                <li>Tracks Declining performance</li>
+                            </ul>
+                            <div class="feature-highlight">Helps in long-term academic monitoring</div>
+                        </div>
+                        <!-- 12. Why This System Matters -->
+                        <div class="feature-card"
+                            style="background: linear-gradient(135deg, rgba(124, 110, 245, 0.05) 0%, rgba(124, 110, 245, 0.15) 100%); border-color: rgba(124, 110, 245, 0.3);">
+                            <div class="feature-icon"
+                                style="background: transparent; font-size: 38px; margin-bottom: 10px;">💡</div>
+                            <h3 class="feature-title">12. Why This System Matters</h3>
+                            <p class="feature-desc">Transforms complex academic data into clear, actionable insights,
+                                making it easier for educators to:</p>
+                            <ul class="feature-list" style="margin-bottom: 0;">
+                                <li style="font-weight: 500;"><span
+                                        style="color: var(--accent); margin-right: 8px;">✓</span> Analyze results faster
+                                </li>
+                                <li style="font-weight: 500;"><span
+                                        style="color: var(--accent); margin-right: 8px;">✓</span> Improve academic
+                                    performance</li>
+                                <li style="font-weight: 500;"><span
+                                        style="color: var(--accent); margin-right: 8px;">✓</span> Make informed
+                                    decisions</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -221,15 +766,16 @@
                                 <span>ℹ️</span> Disclaimer
                             </div>
                             <p>
-                                The analysed data may not always be 100% accurate. It is generated from Excel and PDF files published by 
-                                Abdul Kalam Technological University, and since the formats of these files may change over time, 
-                                the processing scripts are updated accordingly. While every effort is made to ensure accuracy, 
-                                occasional errors or discrepancies may occur.
+                                The analysed data may not always be 100% accurate. It is generated from Excel and PDF
+                                files published by Abdul Kalam Technological University, and since the formats of these
+                                files may change over time, the processing scripts are updated accordingly. While every
+                                effort is made to ensure accuracy, occasional errors or discrepancies may occur.
                             </p>
                         </div>
                         <div class="footer-contact">
-                            If you notice any issues in the displayed data, please feel free to report them at: 
-                            <a href="mailto:aruncx@gmail.com?subject=KTU%20Result%20Analyzer" class="footer-link">aruncx@gmail.com</a>
+                            If you notice any issues in the displayed data, please feel free to report them at:
+                            <a href="mailto:aruncx@gmail.com?subject=KTU%20Result%20Analyzer"
+                                class="footer-link">aruncx@gmail.com</a>
                         </div>
                     </div>
                 </footer>
@@ -248,7 +794,29 @@
             },
             switchMode(mode) {
                 if (mode === 'HOME') {
-                    // Current behavior is just resetting the view, we'll keep it doing nothing specific or leave as is
+                    document.getElementById('view-home').style.display = 'block';
+                    document.getElementById('view-features').style.display = 'none';
+                    document.getElementById('view-about').style.display = 'none';
+                    document.getElementById('nav-home').classList.add('active');
+                    document.getElementById('nav-features').classList.remove('active');
+                    document.getElementById('nav-about').classList.remove('active');
+                    document.getElementById('page-title').innerHTML = `APJ Abdul Kalam Technological University Academic Results <span>Analyser</span>`;
+                } else if (mode === 'FEATURES') {
+                    document.getElementById('view-home').style.display = 'none';
+                    document.getElementById('view-features').style.display = 'block';
+                    document.getElementById('view-about').style.display = 'none';
+                    document.getElementById('nav-home').classList.remove('active');
+                    document.getElementById('nav-features').classList.add('active');
+                    document.getElementById('nav-about').classList.remove('active');
+                    document.getElementById('page-title').innerHTML = `Platform <span>Features</span>`;
+                } else if (mode === 'ABOUT') {
+                    document.getElementById('view-home').style.display = 'none';
+                    document.getElementById('view-features').style.display = 'none';
+                    document.getElementById('view-about').style.display = 'block';
+                    document.getElementById('nav-home').classList.remove('active');
+                    document.getElementById('nav-features').classList.remove('active');
+                    document.getElementById('nav-about').classList.add('active');
+                    document.getElementById('page-title').innerHTML = `About Platform <span>Information</span>`;
                 }
             }
         };
@@ -259,7 +827,7 @@
         firebase.auth().onAuthStateChanged(u => {
             currentUser = u;
             document.getElementById('loginBtn').style.display = u ? 'none' : 'flex';
-            
+
             // Toggle Modules vs Prompt Card
             document.getElementById('moduleGrid').style.display = u ? 'grid' : 'none';
             document.getElementById('loginPrompt').style.display = u ? 'none' : 'flex';

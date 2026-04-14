@@ -234,6 +234,7 @@ module.exports = async function handler(req, res) {
     const { files } = req.body; 
     if (!files || !Array.isArray(files) || files.length === 0) return res.status(400).json({ error: 'Missing or empty files array in request' });
 
+    const semDataArr = [];
     for (let f of files) {
       if (!f.base64) continue;
       const buffer = Buffer.from(f.base64, 'base64');

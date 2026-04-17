@@ -14,10 +14,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Semester Analyser | KTU Result Analyser</title>
   <link rel="canonical" href="https://ktuanalysis.vercel.app/semester-analyzer.html">
-  <meta name="description" content="Analyse KTU (APJ Abdul Kalam Technological University) semester results. Upload Excel and PDF files to get batchwise insights, subject rankings, and performance trends.">
-  <meta name="keywords" content="KTU analysis, KTU result analysis, KTU result checker, KTU CGPA calculator, KTU SGPA calculator, KTU marks analysis, KTU student portal tools, APJ Abdul Kalam Technological University results, KTU semester result analysis, engineering result analysis Kerala, KTU academic performance tool, KTU result statistics, Kerala engineering results, KTU result dashboard">
+  <meta name="description"
+    content="Analyse KTU (APJ Abdul Kalam Technological University) semester results. Upload Excel and PDF files to get batchwise insights, subject rankings, and performance trends.">
+  <meta name="keywords"
+    content="KTU analysis, KTU result analysis, KTU result checker, KTU CGPA calculator, KTU SGPA calculator, KTU marks analysis, KTU student portal tools, APJ Abdul Kalam Technological University results, KTU semester result analysis, engineering result analysis Kerala, KTU academic performance tool, KTU result statistics, Kerala engineering results, KTU result dashboard">
   <meta property="og:title" content="Semester Result Analyser | KTU Result Analyser">
-  <meta property="og:description" content="Free KTU Result Analyser — analyse APJ Abdul Kalam University batch & semester results, CGPA trends, student rankings and backlog analysis.">
+  <meta property="og:description"
+    content="Free KTU Result Analyser — analyse APJ Abdul Kalam University batch & semester results, CGPA trends, student rankings and backlog analysis.">
   <meta property="og:url" content="https://ktuanalysis.vercel.app/semester-analyzer.html">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://ktuanalysis.vercel.app/assets/og-preview.png">
@@ -27,21 +30,45 @@
   <!-- Twitter Card tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Semester Result Analyser | KTU Result Analyser">
-  <meta name="twitter:description" content="Free KTU Result Analyser — analyse APJ Abdul Kalam University batch & semester results, CGPA trends, student rankings and backlog analysis.">
+  <meta name="twitter:description"
+    content="Free KTU Result Analyser — analyse APJ Abdul Kalam University batch & semester results, CGPA trends, student rankings and backlog analysis.">
   <meta name="twitter:image" content="https://ktuanalysis.vercel.app/assets/og-preview.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48x48.png">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/unified.css">
   <style>
-    .card { background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.05); backdrop-filter: blur(12px); transition: all 0.3s ease-in-out; }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 0 20px rgba(124,110,245,0.15); border-color: var(--accent) !important; }
-    .btn:hover { box-shadow: 0 4px 15px rgba(124,110,245,0.3); filter: brightness(1.1); }
-    .nav-active { background: linear-gradient(90deg, rgba(124,110,245,0.15) 0%, transparent 100%) !important; color: var(--accent) !important; border-left: 3px solid var(--accent); }
+    .card {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease-in-out;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 0 20px rgba(124, 110, 245, 0.15);
+      border-color: var(--accent) !important;
+    }
+
+    .btn:hover {
+      box-shadow: 0 4px 15px rgba(124, 110, 245, 0.3);
+      filter: brightness(1.1);
+    }
+
+    .nav-active {
+      background: linear-gradient(90deg, rgba(124, 110, 245, 0.15) 0%, transparent 100%) !important;
+      color: var(--accent) !important;
+      border-left: 3px solid var(--accent);
+    }
   </style>
 </head>
 
@@ -204,7 +231,7 @@
       const bd = theme === 'dark' ? 'rgba(167,139,250,0.1)' : theme === 'medium' ? '#30363d' : 'rgba(99,102,241,0.1)';
       const txt = theme === 'dark' ? '#f8fafc' : theme === 'medium' ? '#c9d1d9' : '#0f172a';
       const mu = theme === 'dark' ? '#64748b' : theme === 'medium' ? '#6e7681' : '#94a3b8';
-      const DC = ['#7c6ef5','#10d9a8','#f59e0b','#ef4444','#3b82f6','#ec4899'];
+      const DC = ['#7c6ef5', '#10d9a8', '#f59e0b', '#ef4444', '#3b82f6', '#ec4899'];
 
       const TABS = [
         { id: 'upload', icon: 'fa-cloud-arrow-up', label: 'Upload' },
@@ -275,17 +302,13 @@
       </header>
 
       <main class="content">
-        <div style=${{ background: 'rgba(124, 110, 245, 0.03)', borderRadius: 12, border: '1px solid var(--border)', padding: '15px 20px', marginBottom: 24 }}>
-          <p style=${{ color: mu, fontSize: 13, margin: 0, lineHeight: 1.6 }}>
-            KTU Analysis is a free tool for APJ Abdul Kalam Technological University staff and students to perform comprehensive batch-wise analysis and view semester-wise results. It enables students and faculty to easily track academic performance, rankings, and backlog history.
-          </p>
-        </div>
+
 
       <!-- UPLOAD TAB -->
       ${tab === 'upload' && html`<div class="fadeUp" style=${{ maxWidth: 680, margin: '32px auto' }}>
         <div style=${{ textAlign: 'center', marginBottom: 40 }}>
           <div style=${{ fontFamily: "var(--font-head)", fontSize: 42, fontWeight: 800, letterSpacing: '.02em', background: 'linear-gradient(135deg,var(--accent) 40%,var(--accent))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1, marginBottom: 12 }}>
-            SEMESTER RESULT PDF ANALYZER
+            SEMESTER RESULT PDF ANALYSER
           </div>
           <p style=${{ color: mu, fontSize: 15, lineHeight: 1.7, maxWidth: 480, margin: '0 auto' }}>
             Upload KTU result PDFs for instant analytics, department rankings, subject difficulty analysis and AI-powered insights.
@@ -392,10 +415,10 @@
           </div>
           <div style=${{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             ${[{ icon: '🥇', title: 'Best Department', name: sem.ov.best?.name, stat: `${sem.ov.best?.pp}% pass · SGPA ${sem.ov.best?.avgSGPA}`, color: 'var(--gold)' },
-              { icon: '📉', title: 'Needs Attention', name: sem.ov.worst?.name, stat: `${sem.ov.worst?.pp}% pass · SGPA ${sem.ov.worst?.avgSGPA}`, color: 'var(--red)' },
-              { icon: '🔥', title: 'Toughest Subject', name: sem.ov.tough?.name, stat: `Only ${sem.ov.tough?.pp}% pass rate`, color: 'var(--accent)' },
-              { icon: '⭐', title: 'Easiest Subject', name: sem.ov.easiest?.name, stat: `${sem.ov.easiest?.pp}% pass rate`, color: 'var(--green)' },
-            ].map((h, i) => html`
+          { icon: '📉', title: 'Needs Attention', name: sem.ov.worst?.name, stat: `${sem.ov.worst?.pp}% pass · SGPA ${sem.ov.worst?.avgSGPA}`, color: 'var(--red)' },
+          { icon: '🔥', title: 'Toughest Subject', name: sem.ov.tough?.name, stat: `Only ${sem.ov.tough?.pp}% pass rate`, color: 'var(--accent)' },
+          { icon: '⭐', title: 'Easiest Subject', name: sem.ov.easiest?.name, stat: `${sem.ov.easiest?.pp}% pass rate`, color: 'var(--green)' },
+          ].map((h, i) => html`
               <div key=${i} class="card" style=${{ padding: '14px 16px', borderLeft: `3px solid ${h.color}`, display: 'flex', gap: 12, alignItems: 'center' }}>
                 <span style=${{ fontSize: 22 }}>${h.icon}</span>
                 <div style=${{ flex: 1, minWidth: 0 }}>
@@ -481,8 +504,8 @@
                 <thead><tr><th>Code</th><th>Subject Name</th><th>Total</th><th>Passed</th><th>Failed</th><th>Pass %</th><th>Difficulty</th></tr></thead>
                 <tbody>
                   ${[...dept.subjects].sort((a, b) => parseFloat(a.pp) - parseFloat(b.pp)).map(sub => {
-                    const p = parseFloat(sub.pp), [cls, lbl] = p < 60 ? ['diffH', 'Hard'] : p < 78 ? ['diffM', 'Medium'] : ['diffE', 'Easy'], barColor = p < 60 ? 'var(--red)' : p < 78 ? 'var(--gold)' : 'var(--green)';
-                    return html`<tr key=${sub.code}>
+            const p = parseFloat(sub.pp), [cls, lbl] = p < 60 ? ['diffH', 'Hard'] : p < 78 ? ['diffM', 'Medium'] : ['diffE', 'Easy'], barColor = p < 60 ? 'var(--red)' : p < 78 ? 'var(--gold)' : 'var(--green)';
+            return html`<tr key=${sub.code}>
                       <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--accent)', fontSize: 12 }}>${sub.code}</span></td>
                       <td style=${{ maxWidth: 220, fontSize: 13 }}>${sub.name}</td>
                       <td style=${{ fontFamily: "var(--font-mono)" }}>${sub.total}</td>
@@ -494,7 +517,7 @@
                       </div></td>
                       <td><span class=${'btn ' + cls} style=${{ padding: '2px 10px', fontSize: 11, fontWeight: 600, borderRadius: 20 }}>${lbl}</span></td>
                     </tr>`;
-                  })}
+          })}
                 </tbody>
               </table>
             </div>`)}
@@ -516,8 +539,8 @@
             <thead><tr><th>#</th><th>Reg. No.</th><th>Dept</th><th>SGPA</th><th>Status</th><th>Passed</th><th>Failed</th></tr></thead>
             <tbody>
               ${filteredStudents.slice(0, 200).map((stu, i) => {
-                const passCount = stu.subjects.filter(s => s.passed).length, failCount = stu.subjects.length - passCount, di = sem.departments.findIndex(d => d.code === stu.department);
-                return html`<tr key=${i}>
+            const passCount = stu.subjects.filter(s => s.passed).length, failCount = stu.subjects.length - passCount, di = sem.departments.findIndex(d => d.code === stu.department);
+            return html`<tr key=${i}>
                   <td style=${{ color: mu, fontSize: 11 }}>${i + 1}</td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", fontSize: 12, color: mu }}>${stu.regNo}</span></td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: DC[di >= 0 ? di % DC.length : 0] }}>${stu.department}</span></td>
@@ -526,7 +549,7 @@
                   <td><span style=${{ fontFamily: "var(--font-mono)", color: 'var(--green)' }}>${passCount}</span></td>
                   <td><span style=${{ fontFamily: "var(--font-mono)", color: failCount > 0 ? 'var(--red)' : mu }}>${failCount}</span></td>
                 </tr>`;
-              })}
+          })}
             </tbody>
           </table>
         </div>
@@ -562,10 +585,10 @@
             </div>`}
           <div style=${{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
             ${aiState.data.insights?.map((ins, i) => {
-              const colMap = { positive: 'var(--green)', warning: 'var(--gold)', critical: 'var(--red)', info: 'var(--accent)' };
-              const icoMap = { positive: '✓', warning: '⚠', critical: '✗', info: '◈' };
-              const c = colMap[ins.type] || 'var(--accent)';
-              return html`<div key=${i} class="card" style=${{ padding: '18px 20px', borderLeft: `3px solid ${c}` }}>
+            const colMap = { positive: 'var(--green)', warning: 'var(--gold)', critical: 'var(--red)', info: 'var(--accent)' };
+            const icoMap = { positive: '✓', warning: '⚠', critical: '✗', info: '◈' };
+            const c = colMap[ins.type] || 'var(--accent)';
+            return html`<div key=${i} class="card" style=${{ padding: '18px 20px', borderLeft: `3px solid ${c}` }}>
                 <div style=${{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <span style=${{ fontSize: 14, color: c, flexShrink: 0, marginTop: 1 }}>${icoMap[ins.type] || '◈'}</span>
                   <div>
@@ -574,7 +597,7 @@
                   </div>
                 </div>
               </div>`;
-            })}
+          })}
           </div>
           ${aiState.data.recommendations?.length > 0 && html`
             <div class="card" style=${{ padding: '20px 24px', marginBottom: 16 }}>

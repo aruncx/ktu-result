@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /node_modules/
+Disallow: /firebase.json
+Disallow: /package.json
+Disallow: /package-lock.json
 
+# Host
+Host: https://ktuanalysis.vercel.app/
+
+# Sitemaps
 Sitemap: https://ktuanalysis.vercel.app/sitemap.xml

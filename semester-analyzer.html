@@ -254,9 +254,9 @@
         </div>
       </div>
       <nav style=${{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
-        <div class="nav-item" onClick=${() => window.location.href = 'index.html'} style=${{ marginBottom: 12, borderBottom: `1px solid ${bd}`, borderRadius: 0, paddingBottom: 12 }}>
+        <a href="index.html" class="nav-item" style=${{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit', marginBottom: 12, borderBottom: `1px solid ${bd}`, borderRadius: 0, paddingBottom: 12 }}>
           <i class="fa-solid fa-house" style=${{ fontSize: 16, width: 24 }}></i><span>Dashboard Home</span>
-        </div>
+        </a>
         ${TABS.filter(t => !t.nd || analysis).map(t => html`
           <div key=${t.id} class=${'nav-item ' + (tab === t.id ? 'nav-active' : '')} onClick=${() => setTab(t.id)}>
             <i class=${'fa-solid ' + t.icon} style=${{ fontSize: 16, width: 24 }}></i>${t.label}

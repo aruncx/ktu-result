@@ -238,7 +238,9 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
     const sumHdr = ['Semester', 'Students', 'All Clear', 'Has Arrears', 'F Grades', 'Pass Rate %'];
     const sumDat = semData.map(s => [s.label, s.totalStu, s.passAll, s.failedSome, s.totalFailures, parseFloat(s.passRate)]);
 
-    const ppHdr = ['Semester', 'Students (Sem)', 'Full Pass (Sem)', 'Pass % (Sem)', 'Upto Semester', 'Full Pass (Cumul)', 'Pass % (Cumul)'];
+    // ppGrp: row 0=SEMESTER(col0), cols 1-3=SEMESTERWISE PASS%, cols 4-6=CUMULATIVE PASS%
+    const ppGrp = ['SEMESTER', 'SEMESTERWISE PASS %', '', '', 'CUMULATIVE PASS %', '', ''];
+    const ppHdr = ['', 'NO. OF STUDENTS', 'FULL PASS', 'PASS %', 'UPTO SEMESTER', 'FULL PASS', 'PASS %'];
     const ppDat = semData.map((sem, si) => {
       const labelsUpTo = semData.slice(0, si + 1).map(s => s.label);
       const cumulPass = Object.keys(students).filter(k => labelsUpTo.every(lbl => students[k].sems[lbl]?.semPassed)).length;
@@ -286,8 +288,12 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
     push([], 10, 'gap');
 
     pushMerge(['# PASS PERCENTAGE REPORT'], 24, nc, 'secHdr');
-    push(ppHdr, 22, 'hdr');
-    ppDat.forEach((row, ri) => { push(row, 20, ri % 2 === 0 ? 'even' : 'odd'); });
+    // Group header row: merge col 1-3 for SEMESTERWISE, col 4-6 for CUMULATIVE
+    merges.push({ s: { r: cr, c: 1 }, e: { r: cr, c: 3 } });
+    merges.push({ s: { r: cr, c: 4 }, e: { r: cr, c: 6 } });
+    push(ppGrp, 22, 'ppGrp');
+    push(ppHdr, 20, 'ppSubHdr');
+    ppDat.forEach((row, ri) => { push(row, 20, ri % 2 === 0 ? 'ppEven' : 'ppOdd'); });
     push([], 10, 'gap');
 
     pushMerge(['# CGPA TOPPERS (Top 10)'], 24, nc, 'secHdr');
@@ -310,6 +316,28 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
       else if (meta === 'kpiHdr') styR(ws, r, 0, r, 5, S.hdr);
       else if (meta === 'kpiRow') styR(ws, r, 0, r, 5, S.gold);
       else if (meta === 'hdr') styR(ws, r, 0, r, nc - 1, S.hdr);
+      else if (meta === 'ppGrp') {
+        // Col 0: SEMESTER label (blue hdr), cols 1-3: SEMESTERWISE (blue), cols 4-6: CUMULATIVE (green)
+        const hdrGreen = { font: { name: 'Calibri', bold: true, sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1A6B3C' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr('medium', '1A6B3C') };
+        sty(ws, r, 0, S.hdr);
+        styR(ws, r, 1, r, 3, S.hdr);
+        styR(ws, r, 4, r, 6, hdrGreen);
+      }
+      else if (meta === 'ppSubHdr') {
+        const hdrGreen = { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1A6B3C' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr('medium', '1A6B3C') };
+        styR(ws, r, 0, r, 3, S.hdr);
+        styR(ws, r, 4, r, 6, hdrGreen);
+      }
+      else if (meta === 'ppEven' || meta === 'ppOdd') {
+        const odd = (meta === 'ppOdd');
+        aoa[r].forEach((v, ci) => {
+          let st;
+          if (ci === 3 || ci === 6) st = passPct(parseFloat(v));  // Pass % cols
+          else if (ci === 0 || ci === 4) st = rowS(odd, true);    // Semester label cols
+          else st = rowS(odd, false);
+          sty(ws, r, ci, st);
+        });
+      }
       else if (meta === 'even' || meta === 'odd') {
         const odd = (meta === 'odd');
         aoa[r].forEach((v, ci) => {

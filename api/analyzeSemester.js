@@ -12,6 +12,26 @@ const DEPT_MAP = {
   AIM: 'Artificial Intelligence and Machine Learning'
 };
 
+/* ── PDF CUSTOM RENDERER ────────────────────────────────────────── */
+// This ensures that text items on the same horizontal line are joined correctly,
+// which is essential for parsing columns (Code | Name) accurately.
+function render_page(pageData) {
+  return pageData.getTextContent().then(textContent => {
+    const byY = {};
+    textContent.items.forEach(item => {
+      // Group by Y position (rounded to 2px to handle slight misalignments)
+      const y = Math.round(item.transform[5] / 2) * 2;
+      if (!byY[y]) byY[y] = [];
+      byY[y].push(item);
+    });
+    const ys = Object.keys(byY).sort((a, b) => b - a); // Top to bottom
+    return ys.map(y => {
+      // Sort items on the same line from left to right
+      return byY[y].sort((a, b) => a.transform[4] - b.transform[4]).map(item => item.str).join(' ');
+    }).join('\n');
+  });
+}
+
 /* ── ANALYSIS ENGINE ────────────────────────────────────────────── */
 function analyze(semesters) {
   const allStusGlobal = semesters.flatMap(sem => sem.departments.flatMap(d => d.students));
@@ -504,8 +524,8 @@ module.exports = async function handler(req, res) {
     // Process direct base64 data (bypassing storage download)
     const buffer = Buffer.from(fileData, 'base64');
 
-    // Parse PDF Text
-    const data = await pdf(buffer);
+    // Parse PDF Text with custom renderer for better column support
+    const data = await pdf(buffer, { pagerender: render_page });
     const textContext = data.text;
 
     // Analyze text

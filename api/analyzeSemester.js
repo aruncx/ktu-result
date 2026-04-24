@@ -1,13 +1,13 @@
 const pdf = require('pdf-parse');
 const XLSX = require('xlsx-js-style');
-const nodeFetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const nodeFetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 /* ── CONSTANTS ──────────────────────────────────────────────────── */
 const GP = { S: 10, 'A+': 9, A: 8.5, 'B+': 8, B: 7.5, 'C+': 7, C: 6.5, D: 6, P: 5.5, F: 0, FE: 0, I: 0, Ab: 0, Absent: 0, Withheld: 0 };
 const OK = new Set(['S', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'P']);
 const DEPT_MAP = {
-  CSE: 'Computer Science & Engineering', ECE: 'Electronics & Communication',
-  EEE: 'Electrical & Electronics', ME: 'Mechanical Engineering',
+  CSE: 'Computer Science & Engineering', ECE: 'Electronics & Communication Engineering',
+  EEE: 'Electrical & Electronics Engineering', ME: 'Mechanical Engineering',
   CE: 'Civil Engineering', IT: 'Information Technology',
   AIM: 'Artificial Intelligence and Machine Learning'
 };
@@ -94,141 +94,41 @@ const REG_RE = /[A-Z]{2,5}\d{2,4}[A-Z]{1,5}\d{2,4}/;
 function parseTxt(txt) {
   const lines = txt.split(/\r?\n/);
   const students = [];
-  const subNameMap = {};
+  const subNameMap = {}; 
   let cur = null;
-  let lastSubCode = null;
   let collegeName = 'Unknown College';
   let semNumber = 'Semester';
 
   const collegeMatch = txt.match(/Exam\s+Centre:\s*([^\n\r]+)/i);
   if (collegeMatch) collegeName = collegeMatch[1].trim();
-
   const semMatch = txt.match(/B\.Tech\s+(S\d)/i) || txt.match(/(S\d)\s+Result/i);
   if (semMatch) semNumber = semMatch[1].toUpperCase();
 
-  // ── PRE-PASS: Extract subject code→name from the KTU course table ──────────
-  // KTU result PDFs have lines like:
-  //   GYMAT301    MATHEMATICS FOR PHYSICAL SCIENCE-3
-  //   PCCET302    FLUID MECHANICS
-  // pdf-parse sometimes collapses 2+ spaces to 1, so we try both.
-  let preLastCode = null;
+  const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
+
+  // 1. Scan for Subject Definitions (Code -> Name)
   for (let li = 0; li < lines.length; li++) {
     const raw = lines[li].trim();
-    if (!raw) { preLastCode = null; continue; }
-
-    // Match standalone code-only line
-    if (CODE_RE.test(raw) && raw.split(/\s+/).length === 1) {
-      preLastCode = raw.toUpperCase();
-      continue;
-    }
-
-    // Match "CODE   Name" with 2+ spaces OR "CODE Name" with 1 space
-    // Also handles "CODE : Name" or "CODE - Name"
-    // Guard: the 'name' part must not look like a reg number or grade list
-    const tableMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{2,}(.+)/i)
-                    || raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-]\s*(.+)/i)
-                    || (!REG_RE.test(raw) && raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{1}([A-Z][A-Za-z0-9 \-\/&]{3,})$/));
-    if (tableMatch && !REG_RE.test(raw)) {
-      const code = tableMatch[1].toUpperCase();
-      const namePart = tableMatch[2].trim();
-      // Reject if the "name" part looks like grades or reg numbers
-      const looksLikeGrades = /\([A-Za-z+]{1,2}\)/.test(namePart)
-                           || /^[A-Z]{2,6}\d{3,4}[A-Z]?\s+[A-Za-z+]{1,2}\b/.test(namePart)
-                           || /^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld)\s*$/i.test(namePart);
-      if (!looksLikeGrades && namePart.length > 1) {
-        if (!subNameMap[code] || subNameMap[code] === 'Subject') {
-          subNameMap[code] = namePart;
-        }
-        preLastCode = code; // allow multi-line name continuation
-      }
-      continue;
-    }
-
-    // Multi-line name continuation
-    if (preLastCode && raw.length > 2) {
-      const isNewEntry = CODE_RE.test(raw.split(/\s+/)[0]) && raw.split(/\s+/).length === 1;
-      const isGradeLine = /\([A-Za-z+]{1,2}\)/.test(raw) || REG_RE.test(raw);
-      if (!isNewEntry && !isGradeLine) {
-        const existing = subNameMap[preLastCode] || '';
-        if (existing === 'Subject' || existing === '') subNameMap[preLastCode] = raw;
-        else subNameMap[preLastCode] = existing + ' ' + raw;
-      } else {
-        preLastCode = null;
-      }
-    } else {
-      preLastCode = null;
+    if (!raw) continue;
+    const subDefMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()-]{5,150})/i);
+    if (subDefMatch && !raw.includes('(') && !REG_RE.test(raw)) {
+      const code = subDefMatch[1].toUpperCase();
+      const name = subDefMatch[2].trim();
+      if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
     }
   }
-  // ── END PRE-PASS ─────────────────────────────────────────────────────────────
-
-  // ── INLINE SCAN: "CODE NAME GRADE" on student result lines ───────────────────
-  // KTU PDFs often embed subject name on the same line as the grade:
-  //   CST301 DATA STRUCTURES B+
-  // The space-only version (no 2+ space gap) is missed by the pre-pass.
-  const INLINE_SUB_RE = /\b([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Za-z0-9 \-\/&]{2,50})\s+(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab)\b/g;
-  for (const line of lines) {
-    if (REG_RE.test(line)) continue; // skip lines with reg numbers to avoid false matches
-    let m;
-    INLINE_SUB_RE.lastIndex = 0;
-    while ((m = INLINE_SUB_RE.exec(line)) !== null) {
-      const code = m[1].toUpperCase();
-      const name = m[2].trim();
-      if (name.length > 2 && (!subNameMap[code] || subNameMap[code] === 'Subject')) {
-        subNameMap[code] = name;
-      }
-    }
-  }
-  // ── END INLINE SCAN ──────────────────────────────────────────────────────────
-
-  const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
     const raw = line.trim();
     if (!raw) continue;
-    const words = raw.split(/\s+/);
 
-    // 1. Precise Match: "CODE Name" or "CODE : Name" on one line
-    // NOTE: Only update subNameMap if not already populated by the pre-pass
-    const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]+\s*([A-Za-z0-9].*)/i);
-    if (subDefMatch && !REG_RE.test(raw)) {
+    // Inline definitions check
+    const subDefMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()-]{5,150})/i);
+    if (subDefMatch && !raw.includes('(') && !REG_RE.test(raw)) {
       const code = subDefMatch[1].toUpperCase();
       const name = subDefMatch[2].trim();
-
-      const looksLikeGrades = /^[A-Z\+]{1,2}\s+[A-Z]{2,6}\d{3,4}/i.test(name) || /\([A-Za-z+]{1,2}\)/.test(name) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(name);
-      const isJustGrade = GRADE_RE.test(cleanGrade(name));
-
-      if (!looksLikeGrades && !isJustGrade) {
-        // Only set if pre-pass didn't already find a real name for this code
-        if (!subNameMap[code] || subNameMap[code] === 'Subject') {
-          subNameMap[code] = name;
-        }
-        lastSubCode = code;
-      }
-    }
-    // 2. Loose Match: Line starts with CODE alone — name may follow on next line
-    else if (CODE_RE.test(words[0]) && words.length === 1) {
-      // Only track for continuation if pre-pass didn't already resolve this code
-      lastSubCode = (subNameMap[words[0].toUpperCase()] && subNameMap[words[0].toUpperCase()] !== 'Subject')
-        ? null : words[0].toUpperCase();
-    }
-    // 3. Multi-line continuation: If we have a pending code and this line looks like a name
-    else if (lastSubCode && raw.length > 5 && !CODE_RE.test(words[0]) && !GRADE_RE.test(cleanGrade(words[words.length - 1]))) {
-      const isRecordContinuation = /\([A-Za-z+]{1,2}\)/.test(raw) || /^[A-Z]{2,6}\d{3,4}[A-Z]?\s+[A-Za-z+]{1,2}\b/.test(raw) || REG_RE.test(raw) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(raw);
-      if (!isRecordContinuation) {
-        // Only fill in if pre-pass hasn't already set a real name
-        const existing = subNameMap[lastSubCode] || '';
-        if (existing === 'Subject' || existing === '') {
-          subNameMap[lastSubCode] = raw;
-        } else if (!existing.includes(' ')) {
-          // Might be a partial/one-word name from pre-pass — append
-          subNameMap[lastSubCode] = existing + ' ' + raw;
-        }
-      } else {
-        lastSubCode = null;
-      }
-    } else {
-      lastSubCode = null;
+      if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
     }
 
     const rnLabel = raw.match(/(?:Reg(?:ister)?(?:\s*No\.?|Number|\.|No)|Roll\s*No\.?|Enroll(?:ment)?\s*No\.?|Reg\.?\s*No\.?)[:\s.-]*([A-Z0-9]{8,15})/i);
@@ -246,10 +146,12 @@ function parseTxt(txt) {
     }
 
     if (!cur) continue;
+    const words = raw.split(/\s+/);
 
     const dpLabel = raw.match(/(?:Branch|Programme(?:me)?|Department|Course(?!\s*Code)|Stream)\s*[:\s.-]+(.{3,60}?)(?:\s{2,}|$)/i);
     if (dpLabel) { cur.department = normDept(dpLabel[1]); }
 
+    // Strategy 1: "CODE(GRADE)" or "CODE [GRADE]"
     const subWithGradeMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
     if (subWithGradeMatch) {
       const code = subWithGradeMatch[1].toUpperCase();
@@ -261,33 +163,28 @@ function parseTxt(txt) {
         while (true) {
           const next = remaining.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
           if (!next) break;
-          const c = next[1].toUpperCase();
-          const n = subNameMap[c] || 'Subject';
-          const g = cleanGrade(next[2]);
+          const c = next[1].toUpperCase(), g = cleanGrade(next[2]), n = subNameMap[c] || 'Subject';
           if (GRADE_RE.test(g) && !cur.subjects.find(s => s.code === c)) cur.subjects.push({ code: c, name: n, grade: g, passed: OK.has(g), gp: GP[g] ?? 0 });
           remaining = remaining.replace(next[0], '');
         }
       }
     }
 
+    // Strategy 2: "CODE  Subject Name  Grade"
     if (CODE_RE.test(words[0])) {
-      // Try 2+ space separator first (table layout), then single space
-      let parts = raw.split(/\s{2,}/);
-      if (parts.length < 2) parts = raw.split(/\s{1}/); // fallback: single space
+      const parts = raw.split(/\s{2,}/);
       if (parts.length >= 2) {
         const code = parts[0].trim().toUpperCase();
         const gradeToken = cleanGrade(parts[parts.length - 1]);
-        const name = parts.slice(1, parts.length - 1).join(' ').trim();
-        // Persist to subNameMap if we found a real name
-        if (name && name.length > 1 && !GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
-          if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
-        }
-        const resolvedName = subNameMap[code] || name || 'Subject';
-        if (GRADE_RE.test(gradeToken) && !cur.subjects.find(s => s.code === code))
+        const name = parts.slice(1, parts.length - 1).join(' ').trim() || 'Subject';
+        if (GRADE_RE.test(gradeToken) && !cur.subjects.find(s => s.code === code)) {
+          const resolvedName = subNameMap[code] && subNameMap[code] !== 'Subject' ? subNameMap[code] : (name || 'Subject');
           cur.subjects.push({ code, name: resolvedName, grade: gradeToken, passed: OK.has(gradeToken), gp: GP[gradeToken] ?? 0 });
+        }
       }
     }
 
+    // Strategy 3: Scans line for any code followed by a grade
     for (let i = 0; i < words.length - 1; i++) {
       const possibleCode = words[i].toUpperCase();
       if (CODE_RE.test(possibleCode)) {
@@ -307,52 +204,10 @@ function parseTxt(txt) {
 
   pushCur();
 
-  if (students.length === 0) {
-    const tokens = txt.split(/\s+/);
-    let fc = null;
-    for (let ti = 0; ti < tokens.length; ti++) {
-      const t = tokens[ti];
-      if (REG_RE.test(t) && t.length >= 9) {
-        if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
-        fc = { regNo: t, name: 'Unknown', department: deptFromRegNo(t) || 'Unknown', subjects: [] };
-      } else if (fc && CODE_RE.test(t)) {
-        let gi = ti + 1;
-        while (gi < tokens.length && !GRADE_RE.test(cleanGrade(tokens[gi])) && gi < ti + 8) gi++;
-        if (gi < tokens.length) {
-          const grade = cleanGrade(tokens[gi]);
-          if (GRADE_RE.test(grade) && !fc.subjects.find(s => s.code === t)) {
-            fc.subjects.push({ code: t, name: subNameMap[t] || 'Subject', grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
-            ti = gi;
-          }
-        }
-      }
-    }
-    if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
-  }
-
-  // Final Pass: Ensure all subject names are populated from the collected subNameMap
-  // Also build a cross-student name reconciliation map from any subject that was parsed
-  // with a real name (not 'Subject') from inline parsing
+  // Final Reconciliation
   const resolvedNames = {};
-  students.forEach(s => {
-    s.subjects.forEach(sub => {
-      if (sub.name && sub.name !== 'Subject') {
-        resolvedNames[sub.code] = sub.name;
-      }
-    });
-  });
-  // Merge resolved names into subNameMap
-  Object.assign(subNameMap, resolvedNames);
-
-  // Apply final name resolution to all students
-  students.forEach(s => {
-    s.subjects.forEach(sub => {
-      if (sub.name === 'Subject' || !sub.name) {
-        if (subNameMap[sub.code]) sub.name = subNameMap[sub.code];
-        else if (resolvedNames[sub.code]) sub.name = resolvedNames[sub.code];
-      }
-    });
-  });
+  students.forEach(s => s.subjects.forEach(sub => { if (sub.name && sub.name !== 'Subject') resolvedNames[sub.code] = sub.name; }));
+  students.forEach(s => s.subjects.forEach(sub => { if (sub.name === 'Subject') sub.name = (subNameMap[sub.code] && subNameMap[sub.code] !== 'Subject') ? subNameMap[sub.code] : (resolvedNames[sub.code] || 'Subject'); }));
 
   if (!students.length) return null;
   const dm = {};
@@ -434,8 +289,8 @@ async function exportExcelBase64(sem) {
     ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 35 }, { hpt: 25 }, { hpt: 10 }, { hpt: 20 }, { hpt: 30 }, { hpt: 12 }, { hpt: 26 }, ...mkRows(22, dat.length)];
     ws['!freeze'] = { xSplit: 0, ySplit: 7, topLeftCell: 'A8', activePane: 'bottomLeft', state: 'frozen' };
     ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 6, c: 0 }, e: { r: 6 + dat.length, c: NC - 1 } }) };
-    
-    styRange(ws, 0, 0, 0, NC - 1, S.title); 
+
+    styRange(ws, 0, 0, 0, NC - 1, S.title);
     styRange(ws, 1, 0, 1, NC - 1, S.sheetSub);
     styRange(ws, 3, 0, 3, NC - 1, S.kpiLbl);
     // Row 5 KPIs - Simplified to 1 column per metric for reliability
@@ -444,7 +299,7 @@ async function exportExcelBase64(sem) {
     sty(ws, 4, 2, S.kpiRed);   // Fail
     sty(ws, 4, 3, S.kpiGreen); // Pass%
     sty(ws, 4, 4, S.kpiBlue);  // SGPA
-    
+
     styRange(ws, 6, 0, 6, NC - 1, S.hdr);
     dat.forEach((row, ri) => {
       const r = 7 + ri, odd = ri % 2 === 1;
@@ -526,8 +381,8 @@ async function exportExcelBase64(sem) {
     ws['!cols'] = autoW(aoa); ws['!rows'] = [{ hpt: 35 }, { hpt: 25 }, { hpt: 10 }, { hpt: 20 }, { hpt: 30 }, { hpt: 12 }, { hpt: 26 }, ...mkRows(21, dat.length)];
     ws['!freeze'] = { xSplit: 0, ySplit: 7, topLeftCell: 'A8', activePane: 'bottomLeft', state: 'frozen' };
     ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: 6, c: 0 }, e: { r: 6 + dat.length, c: NC - 1 } }) };
-    styRange(ws, 0, 0, 0, NC - 1, S.title); 
-    styRange(ws, 1, 0, 1, NC - 1, S.sheetSub); 
+    styRange(ws, 0, 0, 0, NC - 1, S.title);
+    styRange(ws, 1, 0, 1, NC - 1, S.sheetSub);
     styRange(ws, 3, 0, 3, NC - 1, S.kpiLbl);
     sty(ws, 4, 0, S.kpiBlue); sty(ws, 4, 1, S.kpiGreen); sty(ws, 4, 2, S.kpiRed); sty(ws, 4, 3, S.kpiGreen); sty(ws, 4, 4, S.kpiBlue);
     styRange(ws, 6, 0, 6, NC - 1, S.hdr);
@@ -576,13 +431,13 @@ async function exportExcelBase64(sem) {
     const ws = XL.utils.aoa_to_sheet(aoa); ws['!merges'] = merges; ws['!rows'] = rowH; ws['!cols'] = autoW(aoa);
     ws['!freeze'] = { xSplit: 0, ySplit: stuHdrR + 1, topLeftCell: `A${stuHdrR + 2}`, activePane: 'bottomLeft', state: 'frozen' };
     ws['!autofilter'] = { ref: XL.utils.encode_range({ s: { r: stuHdrR, c: 0 }, e: { r: stuDatR + dept.students.length - 1, c: nStuCols - 1 } }) };
-    styRange(ws, 0, 0, 0, maxC, S.title); 
+    styRange(ws, 0, 0, 0, maxC, S.title);
     styRange(ws, 1, 0, 1, maxC, S.sheetSub);
     styRange(ws, 3, 0, 3, maxC, S.kpiLbl);
     sty(ws, 4, 0, S.kpiBlue); sty(ws, 4, 1, S.kpiGreen); sty(ws, 4, 2, S.kpiRed); sty(ws, 4, 3, S.kpiGreen); sty(ws, 4, 4, S.kpiBlue);
     styRange(ws, subSecR, 0, subSecR, 5, S.secGreen);
-    styRange(ws, subHdrR, 0, subHdrR, 5, S.hdr); 
-    styRange(ws, stuSecR, 0, stuSecR, nStuCols - 1, S.secBlue); 
+    styRange(ws, subHdrR, 0, subHdrR, 5, S.hdr);
+    styRange(ws, stuSecR, 0, stuSecR, nStuCols - 1, S.secBlue);
     styRange(ws, stuHdrR, 0, stuHdrR, nStuCols - 1, S.hdr);
     dept.subjects.forEach((s, ri) => {
       const r = subDatR + ri, odd = ri % 2 === 1;
@@ -626,7 +481,7 @@ module.exports = async function handler(req, res) {
     // Analyze text
     const rawSems = parseTxt(textContext);
     if (!rawSems || !rawSems[0]?.departments?.length) throw new Error('Failed to parse any valid semantic records from the PDF.');
-    
+
     const analysis = analyze(rawSems);
     const sem = analysis[0];
 

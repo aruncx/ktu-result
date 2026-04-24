@@ -26,7 +26,11 @@ function analyze(semesters) {
       const avgSGPA = tot ? targetStudents.reduce((a, s) => a + parseFloat(s.sgpa), 0) / tot : 0;
       const sm = {};
       targetStudents.forEach(stu => stu.subjects.forEach(sub => {
-        if (!sm[sub.code]) sm[sub.code] = { code: sub.code, name: sub.name, total: 0, passed: 0 };
+        if (!sm[sub.code]) {
+          sm[sub.code] = { code: sub.code, name: sub.name || 'Subject', total: 0, passed: 0 };
+        } else if ((sm[sub.code].name === 'Subject' || !sm[sub.code].name) && sub.name && sub.name !== 'Subject') {
+          sm[sub.code].name = sub.name;
+        }
         sm[sub.code].total++;
         if (sub.passed) sm[sub.code].passed++;
       }));
@@ -103,25 +107,27 @@ function parseTxt(txt) {
   if (semMatch) semNumber = semMatch[1].toUpperCase();
 
   // ── PRE-PASS: Extract subject code→name from the KTU course table ──────────
-  // KTU result PDFs have a header table like:
-  //   GYMAT301    MATHEMATICS FOR PHYSICAL SCIENCE-3 / ELECTRICAL SCIENCE-3
+  // KTU result PDFs have lines like:
+  //   GYMAT301    MATHEMATICS FOR PHYSICAL SCIENCE-3
   //   PCCET302    FLUID MECHANICS
-  // This pre-pass captures them before any student record parsing.
+  // pdf-parse sometimes collapses 2+ spaces to 1, so we try both.
   let preLastCode = null;
   for (let li = 0; li < lines.length; li++) {
     const raw = lines[li].trim();
     if (!raw) { preLastCode = null; continue; }
 
-    // Match lines that are ONLY a course code (standalone code line in the table)
+    // Match standalone code-only line
     if (CODE_RE.test(raw) && raw.split(/\s+/).length === 1) {
       preLastCode = raw.toUpperCase();
       continue;
     }
 
-    // Match "CODE   Name..." on one line — must be separated by 2+ spaces (table column gap)
+    // Match "CODE   Name" with 2+ spaces OR "CODE Name" with 1 space
     // Also handles "CODE : Name" or "CODE - Name"
+    // Guard: the 'name' part must not look like a reg number or grade list
     const tableMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{2,}(.+)/i)
-                    || raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-]\s*(.+)/i);
+                    || raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-]\s*(.+)/i)
+                    || (!REG_RE.test(raw) && raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{1}([A-Z][A-Za-z0-9 \-\/&]{3,})$/));
     if (tableMatch && !REG_RE.test(raw)) {
       const code = tableMatch[1].toUpperCase();
       const namePart = tableMatch[2].trim();
@@ -138,9 +144,8 @@ function parseTxt(txt) {
       continue;
     }
 
-    // Multi-line name continuation: if previous line was a code-only or code+partial-name
+    // Multi-line name continuation
     if (preLastCode && raw.length > 2) {
-      // Stop if this line starts a new code, is a reg number, or has grade brackets
       const isNewEntry = CODE_RE.test(raw.split(/\s+/)[0]) && raw.split(/\s+/).length === 1;
       const isGradeLine = /\([A-Za-z+]{1,2}\)/.test(raw) || REG_RE.test(raw);
       if (!isNewEntry && !isGradeLine) {
@@ -155,6 +160,25 @@ function parseTxt(txt) {
     }
   }
   // ── END PRE-PASS ─────────────────────────────────────────────────────────────
+
+  // ── INLINE SCAN: "CODE NAME GRADE" on student result lines ───────────────────
+  // KTU PDFs often embed subject name on the same line as the grade:
+  //   CST301 DATA STRUCTURES B+
+  // The space-only version (no 2+ space gap) is missed by the pre-pass.
+  const INLINE_SUB_RE = /\b([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Za-z0-9 \-\/&]{2,50})\s+(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab)\b/g;
+  for (const line of lines) {
+    if (REG_RE.test(line)) continue; // skip lines with reg numbers to avoid false matches
+    let m;
+    INLINE_SUB_RE.lastIndex = 0;
+    while ((m = INLINE_SUB_RE.exec(line)) !== null) {
+      const code = m[1].toUpperCase();
+      const name = m[2].trim();
+      if (name.length > 2 && !subNameMap[code] || subNameMap[code] === 'Subject') {
+        subNameMap[code] = name;
+      }
+    }
+  }
+  // ── END INLINE SCAN ──────────────────────────────────────────────────────────
 
   const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
@@ -247,12 +271,20 @@ function parseTxt(txt) {
     }
 
     if (CODE_RE.test(words[0])) {
-      const parts = raw.split(/\s{2,}/);
+      // Try 2+ space separator first (table layout), then single space
+      let parts = raw.split(/\s{2,}/);
+      if (parts.length < 2) parts = raw.split(/\s{1}/); // fallback: single space
       if (parts.length >= 2) {
-        const code = parts[0].trim();
+        const code = parts[0].trim().toUpperCase();
         const gradeToken = cleanGrade(parts[parts.length - 1]);
-        const name = parts.slice(1, parts.length - 1).join(' ').trim() || 'Subject';
-        if (GRADE_RE.test(gradeToken) && !cur.subjects.find(s => s.code === code)) cur.subjects.push({ code, name, grade: gradeToken, passed: OK.has(gradeToken), gp: GP[gradeToken] ?? 0 });
+        const name = parts.slice(1, parts.length - 1).join(' ').trim();
+        // Persist to subNameMap if we found a real name
+        if (name && name.length > 1 && !GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
+          if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
+        }
+        const resolvedName = subNameMap[code] || name || 'Subject';
+        if (GRADE_RE.test(gradeToken) && !cur.subjects.find(s => s.code === code))
+          cur.subjects.push({ code, name: resolvedName, grade: gradeToken, passed: OK.has(gradeToken), gp: GP[gradeToken] ?? 0 });
       }
     }
 
@@ -299,10 +331,25 @@ function parseTxt(txt) {
   }
 
   // Final Pass: Ensure all subject names are populated from the collected subNameMap
+  // Also build a cross-student name reconciliation map from any subject that was parsed
+  // with a real name (not 'Subject') from inline parsing
+  const resolvedNames = {};
   students.forEach(s => {
     s.subjects.forEach(sub => {
-      if (sub.name === 'Subject' && subNameMap[sub.code]) {
-        sub.name = subNameMap[sub.code];
+      if (sub.name && sub.name !== 'Subject') {
+        resolvedNames[sub.code] = sub.name;
+      }
+    });
+  });
+  // Merge resolved names into subNameMap
+  Object.assign(subNameMap, resolvedNames);
+
+  // Apply final name resolution to all students
+  students.forEach(s => {
+    s.subjects.forEach(sub => {
+      if (sub.name === 'Subject' || !sub.name) {
+        if (subNameMap[sub.code]) sub.name = subNameMap[sub.code];
+        else if (resolvedNames[sub.code]) sub.name = resolvedNames[sub.code];
       }
     });
   });

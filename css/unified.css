@@ -33,21 +33,24 @@
 
     [data-theme="light"] {
       /* Porcelain SaaS (Light) */
-      --bg: #f8f9fc;
-      --surface: rgba(255, 255, 255, 0.8);
-      --surface2: rgba(255, 255, 255, 0.9);
+      --bg: #eef0f8;
+      --surface: rgba(255, 255, 255, 0.92);
+      --surface2: rgba(248, 249, 252, 0.95);
       --surface3: #ffffff;
       --text: #0f172a;
-      --text2: #475569;
-      --text3: #94a3b8;
-      --accent: #6366f1;
-      --border: rgba(99, 102, 241, 0.1);
-      --border2: rgba(99, 102, 241, 0.15);
-      --green: #10b981;
-      --red: #ef4444;
-      --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-      --shadow2: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      --glow: 0 0 20px rgba(99, 102, 241, 0.12);
+      --text2: #334155;
+      --text3: #64748b;
+      --accent: #4f46e5;
+      --border: rgba(99, 102, 241, 0.15);
+      --border2: rgba(99, 102, 241, 0.25);
+      --green: #059669;
+      --red: #dc2626;
+      --blue: #2563eb;
+      --gold: #d97706;
+      --purple: #7c3aed;
+      --shadow: 0 4px 20px rgba(99, 102, 241, 0.08), 0 1px 4px rgba(0, 0, 0, 0.06);
+      --shadow2: 0 12px 40px rgba(99, 102, 241, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
+      --glow: 0 0 24px rgba(99, 102, 241, 0.18);
     }
 
     [data-theme="medium"] {
@@ -101,6 +104,13 @@
     [data-theme="medium"] body {
       background-image: 
         radial-gradient(circle at 0% 0%, rgba(34, 211, 238, 0.05) 0%, transparent 40%);
+    }
+
+    [data-theme="light"] body {
+      background-image:
+        radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(124, 58, 237, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 60%);
     }
 
     /* SCROLLBAR */
@@ -1907,12 +1917,12 @@
 .hero-title {
   font-family: var(--font-head); font-size: 3.5rem; font-weight: 800; margin-bottom: 1rem;
   background: linear-gradient(to right, var(--text), var(--accent));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   animation: glowText 3s infinite alternate;
 }
 @keyframes glowText {
-  from { text-shadow: 0 0 10px rgba(167, 139, 250, 0.2); }
-  to { text-shadow: 0 0 25px rgba(167, 139, 250, 0.5); }
+  from { filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.2)); }
+  to   { filter: drop-shadow(0 0 18px rgba(167, 139, 250, 0.55)); }
 }
 .hero-desc { color: var(--text2); font-size: 1.1rem; max-width: 600px; margin-bottom: 3rem; }
 

@@ -102,6 +102,60 @@ function parseTxt(txt) {
   const semMatch = txt.match(/B\.Tech\s+(S\d)/i) || txt.match(/(S\d)\s+Result/i);
   if (semMatch) semNumber = semMatch[1].toUpperCase();
 
+  // ── PRE-PASS: Extract subject code→name from the KTU course table ──────────
+  // KTU result PDFs have a header table like:
+  //   GYMAT301    MATHEMATICS FOR PHYSICAL SCIENCE-3 / ELECTRICAL SCIENCE-3
+  //   PCCET302    FLUID MECHANICS
+  // This pre-pass captures them before any student record parsing.
+  let preLastCode = null;
+  for (let li = 0; li < lines.length; li++) {
+    const raw = lines[li].trim();
+    if (!raw) { preLastCode = null; continue; }
+
+    // Match lines that are ONLY a course code (standalone code line in the table)
+    if (CODE_RE.test(raw) && raw.split(/\s+/).length === 1) {
+      preLastCode = raw.toUpperCase();
+      continue;
+    }
+
+    // Match "CODE   Name..." on one line — must be separated by 2+ spaces (table column gap)
+    // Also handles "CODE : Name" or "CODE - Name"
+    const tableMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{2,}(.+)/i)
+                    || raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-]\s*(.+)/i);
+    if (tableMatch && !REG_RE.test(raw)) {
+      const code = tableMatch[1].toUpperCase();
+      const namePart = tableMatch[2].trim();
+      // Reject if the "name" part looks like grades or reg numbers
+      const looksLikeGrades = /\([A-Za-z+]{1,2}\)/.test(namePart)
+                           || /^[A-Z]{2,6}\d{3,4}[A-Z]?\s+[A-Za-z+]{1,2}\b/.test(namePart)
+                           || /^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld)\s*$/i.test(namePart);
+      if (!looksLikeGrades && namePart.length > 1) {
+        if (!subNameMap[code] || subNameMap[code] === 'Subject') {
+          subNameMap[code] = namePart;
+        }
+        preLastCode = code; // allow multi-line name continuation
+      }
+      continue;
+    }
+
+    // Multi-line name continuation: if previous line was a code-only or code+partial-name
+    if (preLastCode && raw.length > 2) {
+      // Stop if this line starts a new code, is a reg number, or has grade brackets
+      const isNewEntry = CODE_RE.test(raw.split(/\s+/)[0]) && raw.split(/\s+/).length === 1;
+      const isGradeLine = /\([A-Za-z+]{1,2}\)/.test(raw) || REG_RE.test(raw);
+      if (!isNewEntry && !isGradeLine) {
+        const existing = subNameMap[preLastCode] || '';
+        if (existing === 'Subject' || existing === '') subNameMap[preLastCode] = raw;
+        else subNameMap[preLastCode] = existing + ' ' + raw;
+      } else {
+        preLastCode = null;
+      }
+    } else {
+      preLastCode = null;
+    }
+  }
+  // ── END PRE-PASS ─────────────────────────────────────────────────────────────
+
   const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
   for (let li = 0; li < lines.length; li++) {
@@ -111,36 +165,46 @@ function parseTxt(txt) {
     const words = raw.split(/\s+/);
 
     // 1. Precise Match: "CODE Name" or "CODE : Name" on one line
+    // NOTE: Only update subNameMap if not already populated by the pre-pass
     const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]+\s*([A-Za-z0-9].*)/i);
     if (subDefMatch && !REG_RE.test(raw)) {
       const code = subDefMatch[1].toUpperCase();
       const name = subDefMatch[2].trim();
-      
+
       const looksLikeGrades = /^[A-Z\+]{1,2}\s+[A-Z]{2,6}\d{3,4}/i.test(name) || /\([A-Za-z+]{1,2}\)/.test(name) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(name);
       const isJustGrade = GRADE_RE.test(cleanGrade(name));
-      
+
       if (!looksLikeGrades && !isJustGrade) {
-        if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
-        lastSubCode = code; // Track for potential multi-line continuation
+        // Only set if pre-pass didn't already find a real name for this code
+        if (!subNameMap[code] || subNameMap[code] === 'Subject') {
+          subNameMap[code] = name;
+        }
+        lastSubCode = code;
       }
-    } 
-    // 2. Loose Match: Line starts with CODE, then empty, then name might be on next line
+    }
+    // 2. Loose Match: Line starts with CODE alone — name may follow on next line
     else if (CODE_RE.test(words[0]) && words.length === 1) {
-      lastSubCode = words[0].toUpperCase();
+      // Only track for continuation if pre-pass didn't already resolve this code
+      lastSubCode = (subNameMap[words[0].toUpperCase()] && subNameMap[words[0].toUpperCase()] !== 'Subject')
+        ? null : words[0].toUpperCase();
     }
     // 3. Multi-line continuation: If we have a pending code and this line looks like a name
-    else if (lastSubCode && raw.length > 5 && !CODE_RE.test(words[0]) && !GRADE_RE.test(cleanGrade(words[words.length-1]))) {
+    else if (lastSubCode && raw.length > 5 && !CODE_RE.test(words[0]) && !GRADE_RE.test(cleanGrade(words[words.length - 1]))) {
       const isRecordContinuation = /\([A-Za-z+]{1,2}\)/.test(raw) || /^[A-Z]{2,6}\d{3,4}[A-Z]?\s+[A-Za-z+]{1,2}\b/.test(raw) || REG_RE.test(raw) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(raw);
       if (!isRecordContinuation) {
+        // Only fill in if pre-pass hasn't already set a real name
         const existing = subNameMap[lastSubCode] || '';
-        if (existing === 'Subject' || existing === '') subNameMap[lastSubCode] = raw;
-        else subNameMap[lastSubCode] = existing + ' ' + raw;
+        if (existing === 'Subject' || existing === '') {
+          subNameMap[lastSubCode] = raw;
+        } else if (!existing.includes(' ')) {
+          // Might be a partial/one-word name from pre-pass — append
+          subNameMap[lastSubCode] = existing + ' ' + raw;
+        }
       } else {
         lastSubCode = null;
       }
-      // Keep lastSubCode for possible 3rd line of name
     } else {
-      lastSubCode = null; // Reset if we see something else
+      lastSubCode = null;
     }
 
     const rnLabel = raw.match(/(?:Reg(?:ister)?(?:\s*No\.?|Number|\.|No)|Roll\s*No\.?|Enroll(?:ment)?\s*No\.?|Reg\.?\s*No\.?)[:\s.-]*([A-Z0-9]{8,15})/i);

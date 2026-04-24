@@ -88,7 +88,7 @@ function cleanGrade(raw) {
 }
 
 const GRADE_RE = /^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld)$/i;
-const CODE_RE = /^[A-Z]{2,6}\d{2,4}[A-Z0-9-]*$/;
+const CODE_RE = /^[A-Z]{2,6}\d{3,4}[A-Z]?$/;
 const REG_RE = /[A-Z]{2,5}\d{2,4}[A-Z]{1,5}\d{2,4}/;
 
 function parseTxt(txt) {
@@ -106,64 +106,55 @@ function parseTxt(txt) {
   const semMatch = txt.match(/B\.Tech\s+(S\d)/i) || txt.match(/(S\d)\s+Result/i);
   if (semMatch) semNumber = semMatch[1].toUpperCase();
 
-  // ── GLOBAL HARVESTER: Look for CODE-NAME pairs everywhere ──────────────────
-  // This helps catch tables that don't start at the beginning of a line
-  const HARVEST_RE = /\b([A-Z]{2,6}\d{2,4}[A-Z0-9-]*)\s+([A-Z][A-Za-z0-9 \-\/&,.()]{3,80})\b/g;
-  let harvestMatch;
-  while ((harvestMatch = HARVEST_RE.exec(txt)) !== null) {
-    const code = harvestMatch[1].toUpperCase();
-    const name = harvestMatch[2].trim();
-    // Validate name: shouldn't be a grade or reg number
-    if (name.length > 3 && !REG_RE.test(name) && !/^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld|Result|Semester|Exam|Centre|Course|Total|Passed|Failed|Register|Name)$/i.test(name.split(/\s+/)[0])) {
-      if (!subNameMap[code] || subNameMap[code] === 'Subject') {
-        subNameMap[code] = name;
-      }
-    }
-  }
-
   // ── PRE-PASS: Extract subject code→name from the KTU course table ──────────
+  // KTU result PDFs have lines like:
+  //   GYMAT301    MATHEMATICS FOR PHYSICAL SCIENCE-3
+  //   PCCET302    FLUID MECHANICS
+  // pdf-parse sometimes collapses 2+ spaces to 1, so we try both.
   let preLastCode = null;
   for (let li = 0; li < lines.length; li++) {
     const raw = lines[li].trim();
-    if (!raw || raw.length < 5) { preLastCode = null; continue; }
+    if (!raw) { preLastCode = null; continue; }
 
-    // Match "CODE   Name" or "CODE : Name" or "CODE - Name"
-    // Support non-breaking spaces \u00A0
-    const tableMatch = raw.match(/^([A-Z]{2,6}\d{2,4}[A-Z0-9-]*)\b[\s\u00A0]*[:\-\s\u00A0][\s\u00A0]*(.+)/i);
-    if (tableMatch) {
-      const code = tableMatch[1].toUpperCase();
-      const namePart = tableMatch[2].trim();
-      
-      const isBadName = REG_RE.test(namePart) 
-                     || /^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld|Result|Exam|Centre|Semester|Exam|Centre|Course|Total|Passed|Failed|Register|Name)\b/i.test(namePart)
-                     || namePart.length < 2;
-
-      if (!isBadName) {
-        if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = namePart;
-        preLastCode = code;
-      }
+    // Match standalone code-only line
+    if (CODE_RE.test(raw) && raw.split(/\s+/).length === 1) {
+      preLastCode = raw.toUpperCase();
       continue;
     }
 
-    // Standalone code line
-    if (CODE_RE.test(raw)) {
-      preLastCode = raw.toUpperCase();
-      // Lookahead: if the next line is likely a name
-      const nextRaw = lines[li+1]?.trim();
-      if (nextRaw && nextRaw.length > 3 && !CODE_RE.test(nextRaw.split(/\s+/)[0]) && !REG_RE.test(nextRaw)) {
-        if (!subNameMap[preLastCode] || subNameMap[preLastCode] === 'Subject') {
-          subNameMap[preLastCode] = nextRaw;
-          li++; // skip next line as it was the name
+    // Match "CODE   Name" with 2+ spaces OR "CODE Name" with 1 space
+    // Also handles "CODE : Name" or "CODE - Name"
+    // Guard: the 'name' part must not look like a reg number or grade list
+    const tableMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{2,}(.+)/i)
+                    || raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-]\s*(.+)/i)
+                    || (!REG_RE.test(raw) && raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s{1}([A-Z][A-Za-z0-9 \-\/&]{3,})$/));
+    if (tableMatch && !REG_RE.test(raw)) {
+      const code = tableMatch[1].toUpperCase();
+      const namePart = tableMatch[2].trim();
+      // Reject if the "name" part looks like grades or reg numbers
+      const looksLikeGrades = /\([A-Za-z+]{1,2}\)/.test(namePart)
+                           || /^[A-Z]{2,6}\d{3,4}[A-Z]?\s+[A-Za-z+]{1,2}\b/.test(namePart)
+                           || /^(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld)\s*$/i.test(namePart);
+      if (!looksLikeGrades && namePart.length > 1) {
+        if (!subNameMap[code] || subNameMap[code] === 'Subject') {
+          subNameMap[code] = namePart;
         }
+        preLastCode = code; // allow multi-line name continuation
       }
       continue;
     }
 
     // Multi-line name continuation
-    if (preLastCode && raw.length > 2 && !REG_RE.test(raw) && !CODE_RE.test(raw.split(/\s+/)[0])) {
-      const existing = subNameMap[preLastCode] || '';
-      if (existing === 'Subject' || existing === '') subNameMap[preLastCode] = raw;
-      else if (!existing.includes(raw)) subNameMap[preLastCode] = existing + ' ' + raw;
+    if (preLastCode && raw.length > 2) {
+      const isNewEntry = CODE_RE.test(raw.split(/\s+/)[0]) && raw.split(/\s+/).length === 1;
+      const isGradeLine = /\([A-Za-z+]{1,2}\)/.test(raw) || REG_RE.test(raw);
+      if (!isNewEntry && !isGradeLine) {
+        const existing = subNameMap[preLastCode] || '';
+        if (existing === 'Subject' || existing === '') subNameMap[preLastCode] = raw;
+        else subNameMap[preLastCode] = existing + ' ' + raw;
+      } else {
+        preLastCode = null;
+      }
     } else {
       preLastCode = null;
     }
@@ -171,10 +162,12 @@ function parseTxt(txt) {
   // ── END PRE-PASS ─────────────────────────────────────────────────────────────
 
   // ── INLINE SCAN: "CODE NAME GRADE" on student result lines ───────────────────
-  // Expanded grade list to include common KTU variants
-  const INLINE_SUB_RE = /\b([A-Z]{2,6}\d{2,4}[A-Z0-9-]*)\s+([A-Z][A-Za-z0-9 \-\/&,.()]{2,80})\s+(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab|AB|Absent|Withheld|Passed|Failed)\b/gi;
+  // KTU PDFs often embed subject name on the same line as the grade:
+  //   CST301 DATA STRUCTURES B+
+  // The space-only version (no 2+ space gap) is missed by the pre-pass.
+  const INLINE_SUB_RE = /\b([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Za-z0-9 \-\/&]{2,50})\s+(S|A\+|A|B\+|B|C\+|C|D|P|F|FE|I|Ab)\b/g;
   for (const line of lines) {
-    if (REG_RE.test(line)) continue;
+    if (REG_RE.test(line)) continue; // skip lines with reg numbers to avoid false matches
     let m;
     INLINE_SUB_RE.lastIndex = 0;
     while ((m = INLINE_SUB_RE.exec(line)) !== null) {
@@ -257,7 +250,7 @@ function parseTxt(txt) {
     const dpLabel = raw.match(/(?:Branch|Programme(?:me)?|Department|Course(?!\s*Code)|Stream)\s*[:\s.-]+(.{3,60}?)(?:\s{2,}|$)/i);
     if (dpLabel) { cur.department = normDept(dpLabel[1]); }
 
-    const subWithGradeMatch = raw.match(/([A-Z]{2,6}\d{2,4}[A-Z0-9-]*)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
+    const subWithGradeMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
     if (subWithGradeMatch) {
       const code = subWithGradeMatch[1].toUpperCase();
       const grade = cleanGrade(subWithGradeMatch[2]);
@@ -266,7 +259,7 @@ function parseTxt(txt) {
         cur.subjects.push({ code, name, grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
         let remaining = raw.replace(subWithGradeMatch[0], '');
         while (true) {
-          const next = remaining.match(/([A-Z]{2,6}\d{2,4}[A-Z0-9-]*)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
+          const next = remaining.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
           if (!next) break;
           const c = next[1].toUpperCase();
           const n = subNameMap[c] || 'Subject';

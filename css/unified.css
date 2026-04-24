@@ -33,16 +33,16 @@
 
     [data-theme="light"] {
       /* Porcelain SaaS (Light) */
-      --bg: #e2e5f0;
-      --surface: rgba(255, 255, 255, 0.9);
-      --surface2: rgba(241, 245, 249, 0.95);
+      --bg: #eef0f8;
+      --surface: rgba(255, 255, 255, 0.92);
+      --surface2: rgba(248, 249, 252, 0.95);
       --surface3: #ffffff;
       --text: #0f172a;
-      --text2: #1e293b;
-      --text3: #475569;
+      --text2: #334155;
+      --text3: #64748b;
       --accent: #4f46e5;
-      --border: rgba(99, 102, 241, 0.2);
-      --border2: rgba(99, 102, 241, 0.3);
+      --border: rgba(99, 102, 241, 0.15);
+      --border2: rgba(99, 102, 241, 0.25);
       --green: #059669;
       --red: #dc2626;
       --blue: #2563eb;
@@ -108,10 +108,9 @@
 
     [data-theme="light"] body {
       background-image:
-        radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
-        radial-gradient(circle at 85% 85%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
-      background-color: #e2e5f0;
+        radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(124, 58, 237, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.04) 0%, transparent 60%);
     }
 
     /* SCROLLBAR */

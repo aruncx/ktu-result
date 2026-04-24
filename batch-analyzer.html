@@ -45,6 +45,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="css/unified.css">
+  <script src="js/theme-manager.js"></script>
 </head>
 
 <body>
@@ -230,15 +231,10 @@
     // ═══════════════════════════════════════════════
     // THEME
     // ═══════════════════════════════════════════════
-    function toggleTheme() {
-      const html = document.documentElement;
-      const themes = ['dark', 'medium', 'light'];
-      const current = html.getAttribute('data-theme') || 'dark';
-      const next = themes[(themes.indexOf(current) + 1) % themes.length];
-      html.setAttribute('data-theme', next);
+    window.addEventListener('ktu-theme-changed', () => {
+      if (ready && typeof redrawAllCharts === 'function') redrawAllCharts();
+    });
 
-      if (ready) redrawAllCharts();
-    }
     function getChartTheme() {
       const theme = document.documentElement.getAttribute('data-theme') || 'dark';
       if (theme === 'dark') return { grid: 'rgba(255,255,255,0.05)', text: '#94a3b8', bg: '#050810' };

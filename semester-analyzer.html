@@ -43,6 +43,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="css/unified.css">
+  <script src="js/theme-manager.js"></script>
   <style>
     .card {
       background: var(--surface) !important;
@@ -124,13 +125,16 @@
 
     /* ── MAIN APP ── */
     function KTUAnalyzer() {
-      const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') || 'dark');
+      const [theme, setTheme] = useState(localStorage.getItem('ktu-theme') || 'dark');
       const dark = theme === 'dark' || theme === 'medium';
       const toggleTheme = useCallback(() => {
-        const themes = ['dark', 'medium', 'light'];
-        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-        const next = themes[(themes.indexOf(cur) + 1) % themes.length];
-        document.documentElement.setAttribute('data-theme', next); setTheme(next);
+        window.toggleTheme();
+      }, []);
+
+      useEffect(() => {
+        const handler = (e) => setTheme(e.detail.theme);
+        window.addEventListener('ktu-theme-changed', handler);
+        return () => window.removeEventListener('ktu-theme-changed', handler);
       }, []);
 
       const [tab, setTab] = useState('upload');
@@ -293,7 +297,7 @@
             </div>` : html`
             <button class="btn" onClick=${login} style=${{ padding: '5px 14px', background: 'var(--accent)', color: 'white', border: 'none', fontSize: 13, fontWeight: 600, display: 'flex', gap: 6, alignItems: 'center' }}><i class="fa-brands fa-google"></i> Login</button>`}
           <div class="theme-switcher" onClick=${toggleTheme} title="Change Theme">
-            <div class="ts-slider" style=${{ transform: theme === 'dark' ? 'translateX(0)' : theme === 'medium' ? 'translateX(32px)' : 'translateX(64px)' }}></div>
+            <div class="ts-slider"></div>
             <div class="ts-icon" title="Obsidian Neon">🌙</div>
             <div class="ts-icon" title="Graphite Pro">🌤</div>
             <div class="ts-icon" title="Porcelain SaaS">☀️</div>

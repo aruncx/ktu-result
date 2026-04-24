@@ -106,6 +106,7 @@
         rel="stylesheet">
 
     <link rel="stylesheet" href="css/unified.css">
+    <script src="js/theme-manager.js"></script>
     <style>
         /* Additional Micro-fixes for layout */
         .badge {
@@ -1192,10 +1193,7 @@
         const app = {
             init() { },
             toggleTheme() {
-                const themes = ['dark', 'medium', 'light'];
-                const current = document.documentElement.getAttribute('data-theme') || 'dark';
-                const next = themes[(themes.indexOf(current) + 1) % themes.length];
-                document.documentElement.setAttribute('data-theme', next);
+                window.toggleTheme();
             },
             switchMode(mode) {
                 // Hide all views

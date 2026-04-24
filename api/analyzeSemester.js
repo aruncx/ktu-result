@@ -106,37 +106,34 @@ function parseTxt(txt) {
 
   const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
-  // 1. Aggressive Scan for Subject Definitions (Code -> Name)
-  let lastFoundCode = null;
-  for (let li = 0; li < lines.length; li++) {
-    const raw = lines[li].trim();
-    if (!raw || raw.length < 3 || raw.toLowerCase().includes('generated on')) continue;
-
-    // Pattern A: Inline "CODE   NAME"
-    const inlineMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()\-&]{3,150})/i);
-    if (inlineMatch && !raw.includes('(') && !REG_RE.test(raw)) {
-      const code = inlineMatch[1].toUpperCase();
-      const name = inlineMatch[2].trim();
+  // 1. Global Heuristic Scan for Subject Definitions
+  // First, find all unique subject codes mentioned in the document
+  const allCodes = Array.from(new Set(txt.match(/[A-Z]{2,6}\d{3,4}[A-Z]?/g) || []));
+  
+  allCodes.forEach(code => {
+    // Escape code for regex
+    const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Look for Pattern: CODE [SPACE/COLON/DASH] NAME
+    const pattern = new RegExp(`${esc}\\s*[:\\-\\s]\\s*([A-Z][A-Z\\d\\s,.:/()\\-&]{5,120})`, 'i');
+    const m = txt.match(pattern);
+    if (m) {
+      const name = m[1].trim().split(/\n/)[0].trim(); // Only take first line of match
       if (!GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
-        if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
-        lastFoundCode = code;
-        continue;
+        subNameMap[code] = name;
       }
     }
+  });
 
-    // Pattern B: Just "CODE" on its own line
-    if (CODE_RE.test(raw)) {
-      lastFoundCode = raw.toUpperCase();
-      continue;
-    }
-
-    // Pattern C: Continuation of the previous name
-    if (lastFoundCode && raw.length > 3 && !CODE_RE.test(raw.split(/\s+/)[0]) && !REG_RE.test(raw) && !raw.includes('(') && !raw.includes('Register')) {
-      const existing = subNameMap[lastFoundCode] || '';
-      if (existing === 'Subject' || existing === '') subNameMap[lastFoundCode] = raw;
-      else if (existing.length < 150 && !existing.includes(raw)) subNameMap[lastFoundCode] = existing + ' ' + raw;
-    } else {
-      lastFoundCode = null;
+  // Second pass: Specific table header scan
+  for (let li = 0; li < lines.length; li++) {
+    const raw = lines[li].trim();
+    if (!raw || raw.length < 5) continue;
+    const m = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()\-&]{5,150})/i);
+    if (m && !raw.includes('(') && !REG_RE.test(raw)) {
+      const code = m[1].toUpperCase(), name = m[2].trim();
+      if (!GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
+        if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
+      }
     }
   }
 
@@ -250,10 +247,14 @@ function parseTxt(txt) {
     if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
   }
 
-  // Final Reconciliation pass
+  // Final Reconciliation pass: Force names onto all subjects
   const finalNames = {};
-  students.forEach(s => s.subjects.forEach(sub => { if (sub.name && sub.name !== 'Subject') finalNames[sub.code] = sub.name; }));
-  students.forEach(s => s.subjects.forEach(sub => { if (sub.name === 'Subject') sub.name = (subNameMap[sub.code] && subNameMap[sub.code] !== 'Subject') ? subNameMap[sub.code] : (finalNames[sub.code] || 'Subject'); }));
+  // 1. Gather names from subNameMap
+  Object.keys(subNameMap).forEach(code => { if (subNameMap[code] && subNameMap[code] !== 'Subject') finalNames[code] = subNameMap[code]; });
+  // 2. Gather names from student subjects
+  students.forEach(s => s.subjects.forEach(sub => { if (sub.name && sub.name !== 'Subject' && sub.name.length > 5) finalNames[sub.code] = sub.name; }));
+  // 3. Apply finalNames to everything
+  students.forEach(s => s.subjects.forEach(sub => { if (finalNames[sub.code]) sub.name = finalNames[sub.code]; }));
 
   if (!students.length) return null;
   const dm = {};

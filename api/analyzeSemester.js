@@ -96,7 +96,6 @@ function parseTxt(txt) {
   const students = [];
   const subNameMap = {}; 
   let cur = null;
-  let lastSubCode = null;
   let collegeName = 'Unknown College';
   let semNumber = 'Semester';
 
@@ -107,58 +106,25 @@ function parseTxt(txt) {
 
   const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
-  // 1. Broad Global Scan for Subject Definitions
+  // 1. Scan for Subject Definitions (Code -> Name)
   for (let li = 0; li < lines.length; li++) {
     const raw = lines[li].trim();
-    if (!raw || raw.toLowerCase().includes('generated on')) continue;
-    
-    // Catch: "CODE   NAME", "CODE : NAME", etc.
-    const subDefMatch = raw.match(/^([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[:\-\s]\s*([A-Z][A-Z\d\s,.:/()\-&]{3,120})/i);
+    if (!raw) continue;
+    // User's exact regex for subject definitions
+    const subDefMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s+([A-Z][A-Z\d\s,.:/()-]{5,150})/i);
     if (subDefMatch && !raw.includes('(') && !REG_RE.test(raw)) {
       const code = subDefMatch[1].toUpperCase();
       const name = subDefMatch[2].trim();
-      if (!GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
-        if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
-        lastSubCode = code; // Track for potential multiline continuation
-        continue;
-      }
-    }
-
-    // Handle multiline name in a table (e.g., Image format)
-    if (lastSubCode && !cur && raw.length > 3 && !CODE_RE.test(raw.split(/\s+/)[0])) {
-      const isNoise = REG_RE.test(raw) || raw.includes('Register') || raw.includes('Course Code');
-      if (!isNoise) {
-        const existing = subNameMap[lastSubCode];
-        if (existing && existing !== 'Subject' && existing.length < 100 && !existing.includes(raw)) {
-          subNameMap[lastSubCode] = existing + ' ' + raw;
-        }
-      } else {
-        lastSubCode = null;
-      }
+      if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
     }
   }
 
-  // Reset for main pass
-  lastSubCode = null;
-
   for (let li = 0; li < lines.length; li++) {
-    const line = lines[li];
-    const raw = line.trim();
+    const raw = lines[li].trim();
     if (!raw) continue;
     const words = raw.split(/\s+/);
 
-    // ── Multi-line Subject Name Continuation (Alternative pass) ──
-    if (lastSubCode && raw.length > 5 && !cur && !CODE_RE.test(words[0])) {
-      const isNoise = /\([A-Za-z+]{1,2}\)/.test(raw) || REG_RE.test(raw) || /^[A-Z]{3}\d{2}[A-Z]{2}\d{3}/i.test(raw) || raw.includes('Register');
-      if (!isNoise) {
-        const existing = subNameMap[lastSubCode] || '';
-        if (existing === 'Subject' || existing === '') subNameMap[lastSubCode] = raw;
-        else if (existing.length < 100 && !existing.includes(raw)) subNameMap[lastSubCode] = existing + ' ' + raw;
-      } else {
-        lastSubCode = null;
-      }
-    }
-
+    // ── Register Number Detection ──
     const rnLabel = raw.match(/(?:Reg(?:ister)?(?:\s*No\.?|Number|\.|No)|Roll\s*No\.?|Enroll(?:ment)?\s*No\.?|Reg\.?\s*No\.?)[:\s.-]*([A-Z0-9]{8,15})/i);
     const rnBare = !rnLabel && (REG_RE.exec(raw) || raw.match(/^[A-Z]{3}\d{2}[A-Z]{2}\d{3}$/));
     const rnVal = rnLabel ? rnLabel[1] : rnBare ? rnBare[0] : null;
@@ -171,15 +137,13 @@ function parseTxt(txt) {
         regNo: cleanRn, department: dept, subjects: [], lateral: cleanRn.toUpperCase().startsWith('L'),
         admissionYear: '20' + (cleanRn.match(/[A-Z]{3,}(\d{2})/)?.[1] || '??')
       };
-      lastSubCode = null;
     }
 
-    if (!cur) {
-      if (CODE_RE.test(words[0]) && words.length === 1) lastSubCode = words[0].toUpperCase();
-      continue;
-    }
+    if (!cur) continue;
 
-    // ── Subject Result Extraction ──
+    const dpLabel = raw.match(/(?:Branch|Programme(?:me)?|Department|Course(?!\s*Code)|Stream)\s*[:\s.-]+(.{3,60}?)(?:\s{2,}|$)/i);
+    if (dpLabel) { cur.department = normDept(dpLabel[1]); }
+
     // Strategy 1: CODE(GRADE)
     const subWithGradeMatch = raw.match(/([A-Z]{2,6}\d{3,4}[A-Z]?)\s*[([({]\s*([A-Za-z+]{1,10})\s*[)\]})]/i);
     if (subWithGradeMatch) {
@@ -197,27 +161,23 @@ function parseTxt(txt) {
       }
     }
 
-    // Strategy 2: CODE NAME GRADE
+    // Strategy 2: CODE NAME GRADE (2+ spaces)
     if (CODE_RE.test(words[0])) {
-      let parts = raw.split(/\s{2,}/);
-      if (parts.length < 2) parts = raw.split(/\s+/);
+      const parts = raw.split(/\s{2,}/);
       if (parts.length >= 2) {
         const code = parts[0].trim().toUpperCase(), grade = cleanGrade(parts[parts.length - 1]);
+        const name = parts.slice(1, parts.length - 1).join(' ').trim() || 'Subject';
         if (GRADE_RE.test(grade) && !cur.subjects.find(s => s.code === code)) {
-          const name = parts.slice(1, parts.length - 1).join(' ').trim();
-          if (name && name.length > 2 && !GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
-            if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = name;
-          }
-          cur.subjects.push({ code, name: subNameMap[code] || name || 'Subject', grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
+          cur.subjects.push({ code, name: subNameMap[code] && subNameMap[code] !== 'Subject' ? subNameMap[code] : name, grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
         }
       }
     }
 
-    // Strategy 3: Loose Multi-token scan
+    // Strategy 3: Multi-token fallback
     for (let i = 0; i < words.length - 1; i++) {
       const pCode = words[i].toUpperCase();
       if (CODE_RE.test(pCode)) {
-        for (let j = 1; j <= 4 && (i + j) < words.length; j++) {
+        for (let j = 1; j <= 3 && (i + j) < words.length; j++) {
           const pGrade = cleanGrade(words[i + j]);
           if (GRADE_RE.test(pGrade)) {
             if (!cur.subjects.find(s => s.code === pCode)) {
@@ -233,16 +193,34 @@ function parseTxt(txt) {
 
   pushCur();
 
-  // Final Pass: Ensure all subject names are populated from the collected subNameMap
-  students.forEach(s => {
-    s.subjects.forEach(sub => {
-      if (sub.name === 'Subject' || !sub.name) {
-        if (subNameMap[sub.code] && subNameMap[sub.code] !== 'Subject') {
-          sub.name = subNameMap[sub.code];
+  // ── Fallback Strategy: token-scan the entire text ──
+  if (students.length === 0) {
+    const tokens = txt.split(/\s+/);
+    let fc = null;
+    for (let ti = 0; ti < tokens.length; ti++) {
+      const t = tokens[ti];
+      if (REG_RE.test(t) && t.length >= 9) {
+        if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
+        fc = { regNo: t, department: deptFromRegNo(t) || 'Unknown', subjects: [], admissionYear: '20' + (t.match(/[A-Z]{3,}(\d{2})/)?.[1] || '??') };
+      } else if (fc && CODE_RE.test(t)) {
+        let gi = ti + 1;
+        while (gi < tokens.length && !GRADE_RE.test(cleanGrade(tokens[gi])) && gi < ti + 8) gi++;
+        if (gi < tokens.length) {
+          const grade = cleanGrade(tokens[gi]);
+          if (GRADE_RE.test(grade) && !fc.subjects.find(s => s.code === t)) {
+            fc.subjects.push({ code: t, name: subNameMap[t] || 'Subject', grade, passed: OK.has(grade), gp: GP[grade] ?? 0 });
+            ti = gi;
+          }
         }
       }
-    });
-  });
+    }
+    if (fc && fc.subjects.length > 0) students.push(finishStu(fc));
+  }
+
+  // Final Reconciliation pass
+  const finalNames = {};
+  students.forEach(s => s.subjects.forEach(sub => { if (sub.name && sub.name !== 'Subject') finalNames[sub.code] = sub.name; }));
+  students.forEach(s => s.subjects.forEach(sub => { if (sub.name === 'Subject') sub.name = subNameMap[sub.code] || finalNames[sub.code] || 'Subject'; }));
 
   if (!students.length) return null;
   const dm = {};

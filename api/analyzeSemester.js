@@ -106,25 +106,22 @@ function parseTxt(txt) {
 
   const pushCur = () => { if (cur && cur.subjects.length > 0) students.push(finishStu(cur)); };
 
-  // 1. Global Heuristic Scan for Subject Definitions
-  // First, find all unique subject codes mentioned in the document
+  // 1. Global Scan for Subject Definitions (Code -> Name)
   const allCodes = Array.from(new Set(txt.match(/[A-Z]{2,6}\d{3,4}[A-Z]?/g) || []));
-  
   allCodes.forEach(code => {
-    // Escape code for regex
     const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    // Look for Pattern: CODE [SPACE/COLON/DASH] NAME
-    const pattern = new RegExp(`${esc}\\s*[:\\-\\s]\\s*([A-Z][A-Z\\d\\s,.:/()\\-&]{5,120})`, 'i');
+    // Pattern: CODE [separator] NAME
+    const pattern = new RegExp(`${esc}[\\s:\\-]+([A-Z][A-Z\\d\\s,.:/()\\-&]{5,120})`, 'i');
     const m = txt.match(pattern);
     if (m) {
-      const name = m[1].trim().split(/\n/)[0].trim(); // Only take first line of match
+      const name = m[1].trim().split(/\n/)[0].trim();
       if (!GRADE_RE.test(cleanGrade(name)) && !REG_RE.test(name)) {
         subNameMap[code] = name;
       }
     }
   });
 
-  // Second pass: Specific table header scan
+  // Second pass: Line-by-line summary table scan
   for (let li = 0; li < lines.length; li++) {
     const raw = lines[li].trim();
     if (!raw || raw.length < 5) continue;
@@ -179,26 +176,15 @@ function parseTxt(txt) {
       }
     }
 
-    // Strategy 2: CODE NAME GRADE
+    // Strategy 2: User's logic
     if (CODE_RE.test(words[0])) {
-      let parts = raw.split(/\s{2,}/);
-      const code = words[0].toUpperCase();
-      const gradeAtEnd = cleanGrade(words[words.length - 1]);
-      
-      if (parts.length < 2 && GRADE_RE.test(gradeAtEnd) && words.length >= 3) {
-        // Handle single space separation
-        parts = [words[0], words.slice(1, words.length - 1).join(' '), words[words.length - 1]];
-      }
-
+      const parts = raw.split(/\s{2,}/);
       if (parts.length >= 2) {
+        const code = parts[0].trim().toUpperCase();
         const gradeToken = cleanGrade(parts[parts.length - 1]);
         if (GRADE_RE.test(gradeToken) && !cur.subjects.find(s => s.code === code)) {
           const nameFromLine = parts.slice(1, parts.length - 1).join(' ').trim();
-          if (nameFromLine && nameFromLine.length > 3 && !GRADE_RE.test(cleanGrade(nameFromLine))) {
-            if (!subNameMap[code] || subNameMap[code] === 'Subject') subNameMap[code] = nameFromLine;
-          }
-          const resolvedName = (subNameMap[code] && subNameMap[code] !== 'Subject') ? subNameMap[code] : (nameFromLine || 'Subject');
-          cur.subjects.push({ code, name: resolvedName, grade: gradeToken, passed: OK.has(gradeToken), gp: GP[gradeToken] ?? 0 });
+          cur.subjects.push({ code, name: subNameMap[code] && subNameMap[code] !== 'Subject' ? subNameMap[code] : (nameFromLine || 'Subject'), grade: gradeToken, passed: OK.has(gradeToken), gp: GP[gradeToken] ?? 0 });
         }
       }
     }
@@ -249,11 +235,8 @@ function parseTxt(txt) {
 
   // Final Reconciliation pass: Force names onto all subjects
   const finalNames = {};
-  // 1. Gather names from subNameMap
   Object.keys(subNameMap).forEach(code => { if (subNameMap[code] && subNameMap[code] !== 'Subject') finalNames[code] = subNameMap[code]; });
-  // 2. Gather names from student subjects
   students.forEach(s => s.subjects.forEach(sub => { if (sub.name && sub.name !== 'Subject' && sub.name.length > 5) finalNames[sub.code] = sub.name; }));
-  // 3. Apply finalNames to everything
   students.forEach(s => s.subjects.forEach(sub => { if (finalNames[sub.code]) sub.name = finalNames[sub.code]; }));
 
   if (!students.length) return null;

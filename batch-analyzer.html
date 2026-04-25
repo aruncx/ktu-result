@@ -13,12 +13,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Batch Analyser | KTU Result Analyser</title>
-  <link rel="canonical" href="https://ktuanalysis.vercel.app/batch-analyzer.html">
+  <link rel="canonical" href="https://ktuanalysis.vercel.app/batch-analyzer">
   <meta name="description" content="Analyse KTU (APJ Abdul Kalam Technological University) semester results. Upload Excel and PDF files to get batchwise insights, subject rankings, and performance trends.">
   <meta name="keywords" content="KTU analysis, KTU result analysis, KTU result checker, KTU CGPA calculator, KTU SGPA calculator, KTU marks analysis, KTU student portal tools, APJ Abdul Kalam Technological University results, KTU semester result analysis, engineering result analysis Kerala, KTU academic performance tool, KTU result statistics, Kerala engineering results, KTU result dashboard">
   <meta property="og:title" content="Batch Result Analyser | KTU Result Analyser">
   <meta property="og:description" content="Free KTU Result Analyser — analyse APJ Abdul Kalam University batch & semester results, CGPA trends, student rankings and backlog analysis.">
-  <meta property="og:url" content="https://ktuanalysis.vercel.app/batch-analyzer.html">
+  <meta property="og:url" content="https://ktuanalysis.vercel.app/batch-analyzer">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://ktuanalysis.vercel.app/assets/og-preview.png">
   <meta property="og:image:width" content="1200">
@@ -61,7 +61,7 @@
         </div>
       </div>
       <nav class="sidebar-nav" id="sideNav">
-        <a href="index.html" class="nav-item"
+        <a href="/" class="nav-item"
           style="display:flex; align-items:center; text-decoration:none; color:inherit; margin-bottom:12px; border-bottom:1px solid var(--border); border-radius:0; padding-bottom:12px;">
           <i class="fa-solid fa-house nav-icon"></i><span>Dashboard Home</span>
         </a>
@@ -197,7 +197,7 @@
       currentUser = u;
       if (!u) {
         // If not logged in, go back to landing page
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
       }
       const ui = document.getElementById('userInfo');
@@ -207,7 +207,7 @@
       }
     });
     function login() { firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-    function logout() { firebase.auth().signOut().then(() => window.location.href = 'index.html'); }
+    function logout() { firebase.auth().signOut().then(() => window.location.href = '/'); }
   
     let slots = [], students = {}, semData = [], ready = false;
     const PASS_GRADES = new Set(['S', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'P', 'PASS']);

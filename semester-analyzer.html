@@ -13,7 +13,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Semester Analyser | KTU Result Analyser</title>
-  <link rel="canonical" href="https://ktuanalysis.vercel.app/semester-analyzer.html">
+  <link rel="canonical" href="https://ktuanalysis.vercel.app/semester-analyzer">
   <meta name="description"
     content="Analyse KTU (APJ Abdul Kalam Technological University) semester results. Upload Excel and PDF files to get batchwise insights, subject rankings, and performance trends.">
   <meta name="keywords"
@@ -21,7 +21,7 @@
   <meta property="og:title" content="Semester Result Analyser | KTU Result Analyser">
   <meta property="og:description"
     content="Free KTU Result Analyser — analyse APJ Abdul Kalam University batch & semester results, CGPA trends, student rankings and backlog analysis.">
-  <meta property="og:url" content="https://ktuanalysis.vercel.app/semester-analyzer.html">
+  <meta property="og:url" content="https://ktuanalysis.vercel.app/semester-analyzer">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://ktuanalysis.vercel.app/assets/og-preview.png">
   <meta property="og:image:width" content="1200">
@@ -157,11 +157,11 @@
           setUser(u);
           setAuthLoading(false);
           // Redirec to Landing if not authenticated
-          if (!u) window.location.href = 'index.html';
+          if (!u) window.location.href = '/';
         });
       }, []);
       const login = () => firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
-      const logout = () => firebase.auth().signOut().then(() => window.location.href = 'index.html');
+      const logout = () => firebase.auth().signOut().then(() => window.location.href = '/');
 
       const handleFile = useCallback(async (file) => {
         if (!user) { setUploadErr('You must login via Google to upload files.'); return; }
@@ -258,7 +258,7 @@
         </div>
       </div>
       <nav style=${{ flex: 1, padding: '16px 0', overflowY: 'auto' }}>
-        <a href="index.html" class="nav-item" style=${{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit', marginBottom: 12, borderBottom: `1px solid ${bd}`, borderRadius: 0, paddingBottom: 12 }}>
+        <a href="/" class="nav-item" style=${{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit', marginBottom: 12, borderBottom: `1px solid ${bd}`, borderRadius: 0, paddingBottom: 12 }}>
           <i class="fa-solid fa-house" style=${{ fontSize: 16, width: 24 }}></i><span>Dashboard Home</span>
         </a>
         ${TABS.filter(t => !t.nd || analysis).map(t => html`

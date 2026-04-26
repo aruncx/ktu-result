@@ -7,7 +7,7 @@ Disallow: /package.json
 Disallow: /package-lock.json
 
 # Host
-Host: https://ktuanalysis.vercel.app/
+Host: https://kturesultanalysis.vercel.app/
 
 # Sitemaps
-Sitemap: https://ktuanalysis.vercel.app/sitemap.xml
+Sitemap: https://kturesultanalysis.vercel.app/sitemap.xml

@@ -300,7 +300,11 @@ async function exportExcelBase64(sem) {
     gold: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: '7B5200' } }, fill: { fgColor: { rgb: 'FFF3CD' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center' }, border: bd('thin', 'FFEEBA') },
     footer: { font: { name: 'Calibri', italic: true, sz: 10, color: { rgb: '1A3A6E' } }, fill: { fgColor: { rgb: 'EBF3FB' }, patternType: 'solid' }, alignment: { horizontal: 'left', vertical: 'center' } },
   };
-  const CREDIT = 'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur. (Note: SGPA might be slightly different from the official KTU result, since subjects in specific schemes have different credits)';
+  const CREDITS = [
+    'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur',
+    'For more visit https://kturesultanalysis.vercel.app/',
+    '(Note: SGPA might be slightly different from the official KTU result, since subjects in specific schemes have different credits)'
+  ];
 
   function sty(ws, r, c, style) { const ref = XL.utils.encode_cell({ r, c }); if (!ws[ref]) ws[ref] = { v: '', t: 's' }; ws[ref].s = style; }
   function styRange(ws, r1, c1, r2, c2, style) { for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) sty(ws, r, c, style); }
@@ -310,12 +314,17 @@ async function exportExcelBase64(sem) {
   function sgpaS(sg, odd) { return sg >= 8 ? S.pass : sg < 5 ? S.fail : (odd ? S.odd : S.even); }
   function rowS(odd, text) { return odd ? (text ? S.oddL : S.odd) : (text ? S.evenL : S.even); }
   function addFooter(ws, aoa, nc) {
-    const cr = aoa.length + 20;
-    const ref = XL.utils.encode_cell({ r: cr, c: 0 });
-    ws[ref] = { v: CREDIT, t: 's', s: S.footer };
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: cr, c: 0 }, e: { r: cr, c: nc - 1 } });
-    const rng = XL.utils.decode_range(ws['!ref'] || 'A1'); if (cr > rng.e.r) rng.e.r = cr; ws['!ref'] = XL.utils.encode_range(rng);
+    const startRow = aoa.length + 20;
+    CREDITS.forEach((txt, i) => {
+      const cr = startRow + i;
+      const ref = XL.utils.encode_cell({ r: cr, c: 0 });
+      ws[ref] = { v: txt, t: 's', s: S.footer };
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: cr, c: 0 }, e: { r: cr, c: nc - 1 } });
+      const rng = XL.utils.decode_range(ws['!ref'] || 'A1'); 
+      if (cr > rng.e.r) rng.e.r = cr; 
+      ws['!ref'] = XL.utils.encode_range(rng);
+    });
   }
 
   (() => {

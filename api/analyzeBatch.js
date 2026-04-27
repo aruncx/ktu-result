@@ -170,7 +170,11 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
   const XL = XLSX;
   const wb = XL.utils.book_new();
   const allStu = Object.values(students);
-  const CREDIT = 'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur';
+  const CREDITS = [
+    'Developed by Arun Xavier, Asst. Prof., Dept. of EEE, Vidya Academy of Science & Technology, Thrissur',
+    'For more visit https://kturesultanalysis.vercel.app/',
+    ''
+  ];
 
   // State helpers
   const lastSemCGPA = s => { for (let i = semData.length - 1; i >= 0; i--) { const sm = s.sems[semData[i].label]; if (sm && sm.cgpa > 0) return sm.cgpa; } return 0; };
@@ -206,12 +210,17 @@ async function exportBatchExcel(students, semData, branchName, maxRegYear) {
   const passPct = (p) => p >= 75 ? S.pass : p < 50 ? S.fail : S.warn;
   const rowS = (odd, txt) => odd ? (txt ? S.oddL : S.odd) : (txt ? S.evenL : S.even);
   const addFooter = (ws, aoa, nc) => {
-    const cr = aoa.length + 20;
-    const ref = XL.utils.encode_cell({ r: cr, c: 0 });
-    ws[ref] = { v: CREDIT, t: 's', s: S.footer };
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: cr, c: 0 }, e: { r: cr, c: nc - 1 } });
-    const rng = XL.utils.decode_range(ws['!ref'] || 'A1'); if (cr > rng.e.r) rng.e.r = cr; ws['!ref'] = XL.utils.encode_range(rng);
+    const startRow = aoa.length + 20;
+    CREDITS.forEach((txt, i) => {
+      const cr = startRow + i;
+      const ref = XL.utils.encode_cell({ r: cr, c: 0 });
+      ws[ref] = { v: txt, t: 's', s: S.footer };
+      if (!ws['!merges']) ws['!merges'] = [];
+      ws['!merges'].push({ s: { r: cr, c: 0 }, e: { r: cr, c: nc - 1 } });
+      const rng = XL.utils.decode_range(ws['!ref'] || 'A1'); 
+      if (cr > rng.e.r) rng.e.r = cr; 
+      ws['!ref'] = XL.utils.encode_range(rng);
+    });
   };
 
   const batchLabel = (() => {

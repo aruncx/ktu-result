@@ -1,5 +1,5 @@
 /**
- * KTU Result Analyser - Centralized Theme Manager
+ * KTU Result Analysis - Centralized Theme Manager
  * Handles persistence, FOUC prevention, and state synchronization across all pages.
  */
 (function() {
